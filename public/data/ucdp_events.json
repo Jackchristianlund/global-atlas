@@ -1,0 +1,1 @@
+{"status":"not_ingested","meta":null,"fields":["lat_e2","lng_e2","day","fatalities_best","type_index","iso_index"],"epoch":"1989-01-01","from_year":null,"date_range":null,"iso":[],"types":[],"count":0,"events":[],"reason":"No UCDP GED snapshot in the store. Run `npm run ingest` where outbound HTTPS reaches ucdpapi.pcr.uu.se."}

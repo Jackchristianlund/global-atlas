@@ -1,0 +1,50 @@
+# Builds the app and publishes it to GitHub Pages on every push to main.
+#
+# The build needs nothing but Node: every data file, font and glyph range is in
+# the repository. What changes once it is served from here rather than from an
+# artifact is that the app can finally reach the network, so the vector tile
+# base map and the live front line query switch themselves on.
+name: Deploy to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # The tests are the point of having them; a broken build should not ship.
+      - run: npm run typecheck
+      - run: npx vitest run
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

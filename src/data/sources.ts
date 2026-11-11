@@ -1,0 +1,166 @@
+import type { Source } from '../types';
+
+/** Date this snapshot was compiled. Nothing in the app is newer than this. */
+export const SNAPSHOT_DATE = '2026-11-11';
+
+const W = 'Wikipedia (crowd-edited; secondary source)';
+
+/**
+ * Every statement in the dataset points to one or more of these records.
+ * `date` is the source's own publication or data date, not the date we read it
+ * (all were read on SNAPSHOT_DATE).
+ */
+export const SOURCES: Record<string, Source> = {
+  // ── Conflict reference lists ────────────────────────────────────────────
+  wikiList: { title: 'List of ongoing armed conflicts (tiers by annual deaths, attributed to ACLED curated data)', publisher: W, url: 'https://en.wikipedia.org/wiki/List_of_ongoing_armed_conflicts', date: '2026-11-09' },
+  cw1026: { title: 'CrisisWatch: October Trends and November Alerts 2026', publisher: 'International Crisis Group', url: 'https://www.crisisgroup.org/crisiswatch/october-trends-and-november-alerts-2026', date: '2026-11-01' },
+  cwSep: { title: 'CrisisWatch: October 2026 Alerts & September Trends (global overview)', publisher: 'International Crisis Group', url: 'https://www.crisisgroup.org/sites/default/files/crisiswatch/crisiswatch-september-2026-global-overview.pdf', date: '2026-10-01' },
+  cwAsia: { title: 'CrisisWatch October 2026 – Asia', publisher: 'International Crisis Group', url: 'https://www.crisisgroup.org/sites/default/files/crisiswatch/crisiswatch-october-2026-asia.pdf', date: '2026-11-01' },
+  cgRadar: { title: 'On Our Radar (Iran, 2 and 16 October 2026)', publisher: 'International Crisis Group', url: 'https://www.crisisgroup.org/sco/global/our-radar', date: '2026-10-16' },
+  ucdp: { title: 'UCDP Conflict Encyclopedia and definitions', publisher: 'Uppsala Conflict Data Program', url: 'https://ucdp.uu.se/', date: '2026-11-09' },
+  acled: { title: 'ACLED conflict data', publisher: 'Armed Conflict Location & Event Data', url: 'https://acleddata.com/', date: '2026-11-09' },
+
+  // ── Ukraine ─────────────────────────────────────────────────────────────
+  isw1107: { title: 'ISW Russian Offensive Campaign Assessment, 7 November 2026', publisher: 'Institute for the Study of War, via Kyiv Post', url: 'https://www.kyivpost.com/post/89449', date: '2026-11-07' },
+  isw1108: { title: 'ISW Russian Offensive Campaign Assessment, 8 November 2026', publisher: 'Institute for the Study of War, via Kyiv Post', url: 'https://www.kyivpost.com/post/89501', date: '2026-11-08' },
+  npr1108: { title: 'Europe to join U.S.-brokered Ukraine talks in Abu Dhabi', publisher: 'NPR', url: 'https://npr.org/2026/11/08/nx-s1-6034014/europe-join-us-brokered-ukraine-talks-abu-dhabi-russia', date: '2026-11-08' },
+  aj1109: { title: 'Russia and Ukraine trade strikes overnight', publisher: 'Al Jazeera', url: 'https://www.aljazeera.com/news/2026/11/9/at-least-one-person-killed-as-russia-and-ukraine-trade-strikes-overnight', date: '2026-11-09' },
+  wikiUkr: { title: 'Russo-Ukrainian war (2022–present)', publisher: W, url: 'https://en.wikipedia.org/wiki/Russo-Ukrainian_war_(2022%E2%80%93present)', date: '2026-11-09' },
+
+  // ── Iran war, Hormuz, Lebanon, Gaza ─────────────────────────────────────
+  wikiIran: { title: '2026 Iran war', publisher: W, url: 'https://en.wikipedia.org/wiki/2026_Iran_war', date: '2026-11-09' },
+  wikiHormuz: { title: '2026 Strait of Hormuz crisis', publisher: W, url: 'https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis', date: '2026-11-09' },
+  national1108: { title: 'Iran steps up campaign of threats to shipping (traffic figure from Lloyd’s List Intelligence)', publisher: 'The National', url: 'https://www.thenationalnews.com/news/mena/2026/11/08/smoke-blanketing-the-strait-iran-steps-up-campaign-of-threats-to-shipping/', date: '2026-11-08' },
+  uani1104: { title: 'Iran Shipping Update, 4 November 2026 (cites IMO incident count)', publisher: 'United Against Nuclear Iran (advocacy organisation)', url: 'https://www.unitedagainstnucleariran.com/analysis/iran-shipping-update-november-4-2026', date: '2026-11-04' },
+  wikiLebanon: { title: '2026 Lebanon war', publisher: W, url: 'https://en.wikipedia.org/wiki/2026_Lebanon_war', date: '2026-11-09' },
+  wikiGaza: { title: 'Gaza war', publisher: W, url: 'https://en.wikipedia.org/wiki/Gaza_war', date: '2026-11-09' },
+  latin1106: { title: 'Five Palestinians killed in Gaza as ceasefire violations continue', publisher: 'Latin Times', url: 'https://www.latintimes.com/five-palestinians-killed-gaza-ceasefire-violations-600967', date: '2026-11-06' },
+
+  // ── Sudan, Ethiopia, DRC, Sahel, Yemen and others ───────────────────────
+  unSudan: { title: 'Sudan’s suffering is plain for all to see say aid teams', publisher: 'UN News', url: 'https://news.un.org/en/story/2026/11/1168753', date: '2026-11-06' },
+  cfrSudan: { title: 'Civil War in Sudan – Global Conflict Tracker', publisher: 'Council on Foreign Relations', url: 'https://www.cfr.org/global-conflict-tracker/conflict/power-struggle-sudan', date: '2026-11-06' },
+  aaSudan: { title: 'Sudanese army advances against RSF in West Kordofan', publisher: 'Anadolu Agency', url: 'https://www.aa.com.tr/en/middle-east/sudanese-army-downs-4th-drone-in-week-as-troops-advance-against-rsf-in-west-kordofan/4116366', date: '2026-11-09' },
+  wikiSudan: { title: 'Sudanese civil war (2023–present)', publisher: W, url: 'https://en.wikipedia.org/wiki/Sudanese_civil_war_(2023%E2%80%93present)', date: '2026-11-09' },
+  ajEth: { title: 'Tigray forces launch offensive against Ethiopian government', publisher: 'Al Jazeera', url: 'https://www.aljazeera.com/news/2026/9/23/ethiopian-airlines-suspends-flights-to-three-northern-tigray-airports', date: '2026-09-23' },
+  ctpEth: { title: 'Ethiopia War Security Review, 23 October 2026', publisher: 'Critical Threats Project (AEI)', url: 'https://www.criticalthreats.org/briefs/ethiopia-war-security-review/october-23-2026', date: '2026-10-23' },
+  wikiTigray: { title: 'Tigray war', publisher: W, url: 'https://en.wikipedia.org/wiki/Tigray_conflict', date: '2026-11-09' },
+  wikiM23: { title: 'M23 campaign (2022–present)', publisher: W, url: 'https://en.wikipedia.org/wiki/M23_campaign_(2022%E2%80%93present)', date: '2026-11-09' },
+  wikiMali: { title: 'Mali War', publisher: W, url: 'https://en.wikipedia.org/wiki/Mali_War', date: '2026-11-09' },
+  wikiYemen: { title: 'Yemeni civil war (2014–present)', publisher: W, url: 'https://en.wikipedia.org/wiki/Yemeni_civil_war_(2014%E2%80%93present)', date: '2026-11-09' },
+  wikiMyanmar: { title: 'Myanmar civil war (2021–present)', publisher: W, url: 'https://en.wikipedia.org/wiki/Myanmar_civil_war_(2021%E2%80%93present)', date: '2026-11-09' },
+  wikiSpear: { title: 'Operation Southern Spear', publisher: W, url: 'https://en.wikipedia.org/wiki/Operation_Southern_Spear', date: '2026-11-09' },
+  wikiThaiKhm: { title: '2025 Cambodian–Thai border crisis', publisher: W, url: 'https://en.wikipedia.org/wiki/2025_Cambodian%E2%80%93Thai_border_crisis', date: '2026-11-09' },
+  wikiHaiti: { title: 'Haitian conflict (2020–present)', publisher: W, url: 'https://en.wikipedia.org/wiki/Haitian_conflict_(2020%E2%80%93present)', date: '2026-11-09' },
+  pak0503: { title: 'Pakistan says no temporary ceasefire with Afghanistan in place', publisher: 'Arab News Pakistan', url: 'https://www.arabnews.pk/node/2642143', date: '2026-05-03' },
+  pak0325: { title: 'Pakistan says Afghanistan ceasefire holds after temporary Eid pause ends', publisher: 'Arab News Pakistan', url: 'https://www.arabnews.pk/node/2637568', date: '2026-03-25' },
+
+  // ── Displacement ────────────────────────────────────────────────────────
+  unhcrGT: { title: 'Global Trends: Forced Displacement in 2025', publisher: 'UNHCR', url: 'https://www.unhcr.org/global-trends', date: '2026-06-11' },
+  unhcrNordic: { title: '10 things to know about the Global Trends', publisher: 'UNHCR Nordic and Baltic', url: 'https://www.unhcr.org/nordic-and-baltic/node/997', date: '2026-08-19' },
+  tocGT: { title: 'Global forced displacement falls in 2025 but remains at historic levels, UNHCR says', publisher: 'The Online Citizen (reporting UNHCR Global Trends)', url: 'https://theonlinecitizen.com/2026/06/11/global-forced-displacement-falls-in-2025-but-remains-at-historic-levels-unhcr-says', date: '2026-06-11' },
+
+  // ── Caucasus ──
+  topGeo: { title: 'Georgia\u2019s Approach to Abkhazia and South Ossetia: A Growing Gap Between Policy and Objective', publisher: 'Tbilisi Open Policy Center', url: 'https://top-center.org/en/analytics/3965/georgias-approach-to-abkhazia-and-south-ossetia-a-growing-gap-between-policy-and-objective', date: '2026-09-23' },
+  warWatchGeo: { title: 'International armed conflict between Georgia and the Russian Federation', publisher: 'War Watch (Geneva Academy RULAC-style classification project)', url: 'https://warwatch.ch/situations/international-armed-conflict-between-georgia-and-russian-federation/', date: '2026-08-20' },
+  niSOss: { title: 'Russia\u2019s Next Annexation: South Ossetia', publisher: 'The National Interest', url: 'https://nationalinterest.org/blog/silk-road-rivalries/russias-next-annexation-south-ossetia', date: '2026-07-14' },
+  base7: { title: '7th Military Base \u2013 Russia\u2019s garrison in Abkhazia', publisher: 'Newslyfe military-base reference layer', url: 'https://newslyfe.com/guide/app/map/layers/military-bases/russia/abkhazia-7th-base', date: '2026-08-01' },
+  base4: { title: '4th Guards Military Base \u2013 Russia\u2019s garrison in South Ossetia', publisher: 'Newslyfe military-base reference layer', url: 'https://newslyfe.com/guide/app/map/layers/military-bases/russia/south-ossetia-4th-base', date: '2026-08-01' },
+  riaBases: { title: 'Russia ratifies Abkhazia and South Ossetia military base deployment', publisher: 'RIA Novosti, via GlobalSecurity.org', url: 'https://www.globalsecurity.org/military/library/news/2011/09/mil-110928-rianovosti01.htm', date: '2011-09-28' },
+  reutersChe: { title: 'Russia\u2019s Kadyrov re-elected leader of Chechnya with almost 100% of the vote', publisher: 'Reuters, via U.S. News', url: 'https://www.usnews.com/news/world/articles/2026-09-21/russias-kadyrov-re-elected-leader-of-chechnya-with-almost-100-of-the-vote', date: '2026-09-21' },
+  wikiCheHead: { title: 'Head of the Chechen Republic', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Head_of_the_Chechen_Republic', date: '2026-10-30' },
+  wikiCheElec: { title: '2026 Chechen head election', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/2026_Chechen_head_election', date: '2026-09-22' },
+  fpChechnya: { title: 'Putin\u2019s Second-Biggest Headache After Ukraine: Chechnya', publisher: 'Foreign Policy', url: 'https://foreignpolicy.com/2026/06/04/russia-putin-chechnya-kadyrov-succession-war-ukraine-unrest/', date: '2026-06-04' },
+  neDisputed: { title: 'Natural Earth 1:10m admin-0 disputed areas (breakaway polygons)', publisher: 'Natural Earth', url: 'https://www.naturalearthdata.com/downloads/10m-cultural-vectors/', date: '2026-11-11' },
+  carnegieMontreux: { title: 'Managing Montreux: Turkey and the Russia-Ukraine War in the Black Sea', publisher: 'Carnegie Endowment for International Peace', url: 'https://carnegieendowment.org/research/2026/07/managing-montreux-turkey-and-the-russia-ukraine-war-in-the-black-sea', date: '2026-07-02' },
+  eutodayStraits: { title: 'Turkey\u2019s Black Sea balancing act: transit charges and NATO access', publisher: 'EU Today', url: 'https://eutoday.net/turkey-black-sea-grain-deal-erdogan-russia-economic-interests/', date: '2026-11-03' },
+  usnwcStraits: { title: 'Closing the Turkish Straits in Times of War', publisher: 'U.S. Naval War College, International Law Studies', url: 'https://digital-commons.usnwc.edu/cgi/viewcontent.cgi?article=3016&context=ils', date: '2022-06-01' },
+  ukrinform1107: { title: 'Injury toll in Russian ballistic attack on Kyiv rises to five', publisher: 'Ukrinform', url: 'https://www.ukrinform.net/rubric-ato/4182323-injury-toll-in-russian-ballistic-attack-on-kyiv-rises-to-five.html', date: '2026-11-07' },
+  kyivind1107: { title: 'Russian ballistic missiles slam Kyiv, damage Northern Bridge, injure at least 6 people', publisher: 'The Kyiv Independent', url: 'https://kyivindependent.com/russian-ballistic-missiles-slam-kyiv-after-zelensky-warns-of-mass-attack/', date: '2026-11-07' },
+  wikiTernopil: { title: '2025 Ternopil strike', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/2025_Ternopil_strike', date: '2026-11-11' },
+  // ── Ukraine, current assessment ──
+  orbisUkr: { title: 'Russian-occupied Ukraine: shares by region, measured from the DeepState map of 30 October 2026 against Natural Earth borders', publisher: 'Orbis (learnorbis.com)', url: 'https://learnorbis.com/world/disputed-territories/russian-occupied-ukraine', date: '2026-11-10' },
+  cfrUkr: { title: 'War in Ukraine \u2013 Global Conflict Tracker', publisher: 'Council on Foreign Relations', url: 'https://www.cfr.org/global-conflict-tracker/conflict/conflict-ukraine', date: '2026-11-07' },
+  ajUkrMap26: { title: 'Mapping Russian attacks and territorial gains across Ukraine', publisher: 'Al Jazeera', url: 'https://www.aljazeera.com/news/2026/2/24/mapping-russian-attacks-and-territorial-gains-across-ukraine', date: '2026-02-24' },
+  ligaZel: { title: 'Zelenskyy cited the percentage of occupied territory', publisher: 'LIGA.net', url: 'https://news.liga.net/en/war/news/zelenskyy-cited-the-percentage-of-occupied-territory-and-explained-the-danger-of-surrendering-the-donbas', date: '2026-10-23' },
+  wikiOccUkr: { title: 'Russian occupation of Ukraine', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Russian_occupation_of_Ukraine', date: '2026-11-11' },
+  wikiOccDnipro: { title: 'Russian occupation of Dnipropetrovsk Oblast', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Russian_occupation_of_Dnipropetrovsk_Oblast', date: '2026-11-11' },
+  wikiPokrovsk: { title: 'Pokrovsk offensive', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Pokrovsk_offensive', date: '2026-11-11' },
+  wikiKostiant: { title: 'Battle of Kostiantynivka', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Battle_of_Kostiantynivka', date: '2026-11-11' },
+  wikiHuliai: { title: 'Huliaipole offensive', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Huliaipole_offensive', date: '2026-11-11' },
+  oswDec1: { title: 'Russians are getting closer to capturing Pokrovsk and Vovchansk. Day 1378 of the war', publisher: 'Centre for Eastern Studies (OSW), Warsaw', url: 'https://www.osw.waw.pl/en/publikacje/analyses/2025-12-02/russians-are-getting-closer-to-capturing-pokrovsk-and-vovchansk-day', date: '2025-12-02' },
+  deskNote1110: { title: 'Ukraine desk note \u2013 10 November 2026 (newsletter relaying the IAEA, the Ukrainian General Staff and Ukrinform)', publisher: 'Oskar Hallgrimsson, Substack', url: 'https://oskarhallgrimsson.substack.com/p/ukraine-desk-note-10-november-2026', date: '2026-11-10' },
+  ucdpGed: { title: 'UCDP Georeferenced Event Dataset (GED)', publisher: 'Uppsala Conflict Data Program', url: 'https://ucdp.uu.se/downloads/', date: '2026-11-09' },
+  unhcrMid25: { title: 'Mid-Year Trends 2025', publisher: 'UNHCR', url: 'https://www.unhcr.org/sites/default/files/2025-11/mid-year-trends-report-2025.pdf', date: '2025-11-05' },
+  unhcrRDF: { title: 'Refugee Data Finder \u2013 key indicators (end-2025)', publisher: 'UNHCR', url: 'https://www.unhcr.org/refugee-statistics', date: '2026-06-11' },
+  unhcrPlaces: { title: 'Where are the largest places hosting refugees? (end-2025 sub-national data)', publisher: 'UNHCR Refugee Data Finder', url: 'https://www.unhcr.org/refugee-statistics/insights/explainers/refugees-largest-places.html', date: '2026-06-11' },
+  unhcrSudan3y: { title: 'Sudan Emergency: Three-Year Impact Update', publisher: 'UNHCR', url: 'https://www.ecoi.net/en/file/local/2139482/Sudan+Emergency_3+Year+Update_Final_April+2026.pdf', date: '2026-04-30' },
+  unhcrSudanJun: { title: 'Sudan regional refugee figures, 30 June 2026 (UNHCR regional update, reported country by country)', publisher: 'Rio Times, reporting UNHCR', url: 'https://www.riotimesonline.com/sudan-refugees-where-they-went-2026/', date: '2026-10-21' },
+  concernHosts: { title: 'Which countries are taking in the most refugees in 2025?', publisher: 'Concern Worldwide, based on UNHCR data', url: 'https://www.concern.net/news/which-countries-take-in-the-most-refugees', date: '2025-08-06' },
+  // ── Trade, shipping, energy ─────────────────────────────────────────────
+  eia: { title: 'World Oil Transit Chokepoints (Country Analysis Brief, 2023 data)', publisher: 'U.S. Energy Information Administration', url: 'https://www.eia.gov/international/content/analysis/special_topics/World_Oil_Transit_Chokepoints/wotc.pdf', date: '2024-06-25' },
+  steo: { title: 'How Much Oil Transited Through World’s Chokepoints in 2Q? (EIA Short-Term Energy Outlook, August 2026)', publisher: 'Rigzone, reporting U.S. EIA', url: 'https://www.rigzone.com/news/how_much_oil_transited_through_worlds_chokepoints_in_2q-12-aug-2026-184358-article/?rss=true', date: '2026-08-12' },
+  lli0827: { title: 'Red Sea Brief: 27 August 2026', publisher: 'Lloyd’s List Intelligence', url: 'https://www.lloydslistintelligence.com/resources/blog/red-sea-brief-27-august-2026', date: '2026-08-27' },
+  lli0806: { title: 'Red Sea Brief: 6 August 2026', publisher: 'Lloyd’s List Intelligence', url: 'https://www.lloydslistintelligence.com/resources/blog/red-sea-brief-6-august-2026', date: '2026-08-06' },
+  seatrade: { title: 'Shipping lines reroute from Red Sea avoiding Houthi threat', publisher: 'Seatrade Maritime News', url: 'https://www.seatrade-maritime.com/containers/shipping-lines-reroute-from-red-sea-avoiding-houthi-threat', date: '2026-03-02' },
+  gcaptain: { title: 'Suez Canal Traffic Stalls at 60% Below Normal Despite 100 Days Without Houthi Attacks', publisher: 'gCaptain', url: 'https://gcaptain.com/suez-canal-traffic-stalls-at-60-below-normal-despite-100-days-without-houthi-attacks/', date: '2026-01-07' },
+  acss: { title: 'Houthi Leverage over the Red Sea Escalates Threats for Africa', publisher: 'Africa Center for Strategic Studies', url: 'https://africacenter.org/spotlight/2026-houthi-red-sea-threats/', date: '2026-09-30' },
+  wikiRedSea: { title: 'Red Sea crisis', publisher: W, url: 'https://en.wikipedia.org/wiki/Red_Sea_crisis', date: '2026-11-09' },
+  euGas: { title: 'Where does the EU’s gas come from? (infographic)', publisher: 'Council of the European Union', url: 'https://www.consilium.europa.eu/en/infographics/eu-gas-supply/', date: '2025-01-01' },
+  norPet: { title: 'Norwegian Petroleum – exports and pipeline system', publisher: 'Norwegian Offshore Directorate / Ministry of Energy', url: 'https://www.norskpetroleum.no/en/', date: '2026-11-09' },
+  wNord: { title: 'Nord Stream 1', publisher: W, url: 'https://en.wikipedia.org/wiki/Nord_Stream_1', date: '2026-11-09' },
+  wDruzhba: { title: 'Druzhba pipeline', publisher: W, url: 'https://en.wikipedia.org/wiki/Druzhba_pipeline', date: '2026-11-09' },
+  wTurk: { title: 'TurkStream', publisher: W, url: 'https://en.wikipedia.org/wiki/TurkStream', date: '2026-11-09' },
+  wPoS: { title: 'Power of Siberia', publisher: W, url: 'https://en.wikipedia.org/wiki/Power_of_Siberia', date: '2026-11-09' },
+  wBTC: { title: 'Baku–Tbilisi–Ceyhan pipeline', publisher: W, url: 'https://en.wikipedia.org/wiki/Baku%E2%80%93Tbilisi%E2%80%93Ceyhan_pipeline', date: '2026-11-09' },
+  wCPC: { title: 'Caspian Pipeline Consortium', publisher: W, url: 'https://en.wikipedia.org/wiki/Caspian_Pipeline_Consortium', date: '2026-11-09' },
+  wMontreux: { title: 'Montreux Convention Regarding the Regime of the Straits', publisher: W, url: 'https://en.wikipedia.org/wiki/Montreux_Convention_Regarding_the_Regime_of_the_Straits', date: '2026-11-09' },
+  wLangeled: { title: 'Langeled pipeline', publisher: W, url: 'https://en.wikipedia.org/wiki/Langeled_pipeline', date: '2026-11-09' },
+
+  // ── Organisations, treaties, sanctions ──────────────────────────────────
+  nato: { title: 'NATO member countries', publisher: 'NATO', url: 'https://www.nato.int/', date: '2026-11-09' },
+  eu: { title: 'EU countries', publisher: 'European Union', url: 'https://european-union.europa.eu/principles-countries-history/eu-countries_en', date: '2026-11-09' },
+  un: { title: 'UN Member States', publisher: 'United Nations', url: 'https://www.un.org/en/about-us/member-states', date: '2026-11-09' },
+  asean: { title: 'ASEAN Member States', publisher: 'ASEAN Secretariat', url: 'https://asean.org/member-states/', date: '2026-11-09' },
+  au: { title: 'African Union Member States', publisher: 'African Union', url: 'https://au.int/en/member_states/countryprofiles2', date: '2026-11-09' },
+  sco: { title: 'Shanghai Cooperation Organisation', publisher: 'SCO Secretariat', url: 'https://eng.sectsco.org/', date: '2026-11-09' },
+  wBrics: { title: 'BRICS', publisher: W, url: 'https://en.wikipedia.org/wiki/BRICS', date: '2026-11-09' },
+  wCsto: { title: 'Collective Security Treaty Organization', publisher: W, url: 'https://en.wikipedia.org/wiki/Collective_Security_Treaty_Organization', date: '2026-11-09' },
+  wGcc: { title: 'Gulf Cooperation Council', publisher: W, url: 'https://en.wikipedia.org/wiki/Gulf_Cooperation_Council', date: '2026-11-09' },
+  wAes: { title: 'Alliance of Sahel States', publisher: W, url: 'https://en.wikipedia.org/wiki/Alliance_of_Sahel_States', date: '2026-11-09' },
+  wAukus: { title: 'AUKUS', publisher: W, url: 'https://en.wikipedia.org/wiki/AUKUS', date: '2026-11-09' },
+  wTreaties: { title: 'Bilateral treaty articles (US–Japan, US–ROK, US–Philippines, ANZUS, PRC–DPRK, Russia–DPRK, Saudi–Pakistan)', publisher: W, url: 'https://en.wikipedia.org/wiki/Mutual_defense_treaty', date: '2026-11-09' },
+  unSanc: { title: 'UN Security Council sanctions regimes', publisher: 'United Nations Security Council', url: 'https://www.un.org/securitycouncil/sanctions/information', date: '2026-11-09' },
+  euSanc: { title: 'EU Sanctions Map', publisher: 'European Union', url: 'https://www.sanctionsmap.eu/', date: '2026-11-09' },
+  ofac: { title: 'Sanctions Programs and Country Information', publisher: 'U.S. Treasury, Office of Foreign Assets Control', url: 'https://ofac.treasury.gov/sanctions-programs-and-country-information', date: '2026-11-09' },
+
+  // ── Territorial control ─────────────────────────────────────────────────
+  ajYemenMaps: { title: 'Yemen: Maps show 10 years of changing control', publisher: 'Al Jazeera (AJLabs)', url: 'https://www.aljazeera.com/news/2026/10/20/yemen-maps-show-10-years-of-changing-control', date: '2026-10-20' },
+  wikiYem2026: { title: '2026 Yemen offensives', publisher: W, url: 'https://en.wikipedia.org/wiki/2026_Yemen_offensives', date: '2026-11-09' },
+  wikiYemMap: { title: 'File:Yemeni Civil War.svg (control map citing ISW News interactive map)', publisher: 'Wikimedia Commons, after ISW News', url: 'https://commons.wikimedia.org/wiki/File:Yemeni_Civil_War.svg', date: '2026-11-02' },
+  wikiHouthiYem: { title: 'Houthi-controlled Yemen', publisher: W, url: 'https://en.wikipedia.org/wiki/Houthi-controlled_Yemen', date: '2026-11-09' },
+  wikiSouthYem: { title: '2025–2026 Southern Yemen campaign', publisher: W, url: 'https://en.wikipedia.org/wiki/2025%E2%80%932026_Southern_Yemen_campaign', date: '2026-11-09' },
+  euaaSyria: { title: 'Syria: Security Situation – 2.8.2 Territorial control and main armed actors', publisher: 'European Union Agency for Asylum (EUAA)', url: 'https://www.euaa.europa.eu/syria-security-situation/282-territorial-control-and-main-armed-actors', date: '2026-07-31' },
+  ukParlSyria: { title: 'Syria in 2026: Interim government and Kurdish integration', publisher: 'UK House of Commons Library', url: 'https://commonslibrary.parliament.uk/research-briefings/cbp-10430/', date: '2026-09-11' },
+  crsSyria: { title: 'Syria: Transition and U.S. Policy', publisher: 'U.S. Congressional Research Service', url: 'https://www.congress.gov/crs_external_products/RL/PDF/RL33487/RL33487.183.pdf', date: '2026-02-26' },
+  euaaKurds: { title: 'COI Query Response: Syria – situation of Kurds, security situation', publisher: 'European Union Agency for Asylum (EUAA)', url: 'https://www.euaa.europa.eu/sites/default/files/publications/2026-03/2026_03_EUAA_COI_Query_Response_Q11_Syria_Developments_Concerning_Situation_of_Kurds_Military_Service_Security_Situation.pdf', date: '2026-03-25' },
+  ajSudanCtrl: { title: 'Is the Sudanese army gaining momentum against the RSF?', publisher: 'Al Jazeera', url: 'https://www.aljazeera.com/news/2026/10/4/is-the-sudanese-army-gaining-momentum-against-the-rsf', date: '2026-10-04' },
+  ajKordofan: { title: 'The battle for Kordofan: the corridor linking Sudan\u2019s east and west', publisher: 'Al Jazeera', url: 'https://www.aljazeera.com/news/2026/10/1/the-battle-for-kordofan-the-corridor-linking-sudans-east-and-west', date: '2026-10-01' },
+  stKordofan: { title: 'Sudan army, allies advance against RSF in West Kordofan', publisher: 'Sudan Tribune', url: 'https://sudantribune.com/article/321005', date: '2026-11-08' },
+  wikiBlueNile: { title: '2026 Blue Nile campaign', publisher: W, url: 'https://en.wikipedia.org/wiki/2026_Blue_Nile_campaign', date: '2026-11-09' },
+  ctpUkr1016: { title: 'Russian Offensive Campaign Assessment, 16 October 2026', publisher: 'Institute for the Study of War & Critical Threats Project', url: 'https://www.criticalthreats.org/analysis/russian-offensive-campaign-assessment-october-16-2026', date: '2026-10-16' },
+  ajUkrMap: { title: 'Mapping Russian attacks and territorial gains across Ukraine', publisher: 'Al Jazeera', url: 'https://www.aljazeera.com/news/2026/2/24/mapping-russian-attacks-and-territorial-gains-across-ukraine', date: '2026-02-24' },
+  wikiDnipro: { title: 'Russian occupation of Dnipropetrovsk Oblast', publisher: W, url: 'https://en.wikipedia.org/wiki/Russian_occupation_of_Dnipropetrovsk_Oblast', date: '2026-11-09' },
+  wikiKharkivOcc: { title: 'Russian occupation of Kharkiv Oblast', publisher: W, url: 'https://en.wikipedia.org/wiki/Russian_occupation_of_Kharkiv_Oblast', date: '2026-11-09' },
+  crsLibya: { title: 'Libya and U.S. Policy (areas of influence)', publisher: 'U.S. Congressional Research Service', url: 'https://www.everycrsreport.com/files/2026-07-21_IF11556_dac571d061bb8c8fd114c106fa70b6e80a833b2f.html', date: '2026-07-21' },
+  ajLibya: { title: 'Can US, Middle Eastern powers unite Libya 15 years after Gaddafi overthrow?', publisher: 'Al Jazeera', url: 'https://www.aljazeera.com/news/2026/8/20/can-us-middle-eastern-powers-unite-libya-15-years-after-gaddafi-overthrow', date: '2026-08-20' },
+  ctpCongo1007: { title: 'Congo War Security Review, 7 October 2026', publisher: 'Critical Threats Project (AEI)', url: 'https://www.criticalthreats.org/briefs/congo-war-security-review/october-7-2026', date: '2026-10-07' },
+  ipisCongo: { title: 'Shifting frontlines in 2026: hostilities in eastern DRC continue amid increased diplomatic efforts', publisher: 'IPIS Research', url: 'https://ipisresearch.be/publication/shifting-frontlines-in-2026-new-year-old-challenges-hostilities-in-eastern-drc-continue-amid-increased-diplomatic-efforts/', date: '2026-06-30' },
+  ctpCongo0121: { title: 'Congo War Security Review, 21 January 2026', publisher: 'Critical Threats Project (AEI)', url: 'https://www.criticalthreats.org/briefs/congo-war-security-review/congo-war-security-review-january-21-2026', date: '2026-01-21' },
+  wikiKherson22: { title: '2022 Kherson counteroffensive (occupation shares, mid-2022)', publisher: W, url: 'https://en.wikipedia.org/wiki/2022_Kherson_counteroffensive', date: '2026-11-10' },
+  wikiLibyaCF: { title: 'Libyan Civil War (2014–2020) and the October 2020 ceasefire', publisher: W, url: 'https://en.wikipedia.org/wiki/Libyan_civil_war_(2014%E2%80%932020)', date: '2026-11-10' },
+  ne10m: { title: 'Natural Earth 1:10m Admin 1 \u2013 States, Provinces', publisher: 'Natural Earth (public domain), via nvkelso/natural-earth-vector', url: 'https://github.com/nvkelso/natural-earth-vector', date: '2026-11-10' },
+
+  // ── Base map ────────────────────────────────────────────────────────────
+  ne: { title: 'Natural Earth 1:110m Admin 0 – Countries (via world-atlas)', publisher: 'Natural Earth (public domain)', url: 'https://www.naturalearthdata.com/', date: '2023-01-01' },
+  nasa: { title: 'Blue Marble Next Generation', publisher: 'NASA Earth Observatory (public domain)', url: 'https://visibleearth.nasa.gov/collection/1484/blue-marble', date: '2004-01-01' },
+};
