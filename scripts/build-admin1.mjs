@@ -40,6 +40,34 @@ const want = new Map(previous.map((u) => [`${u.iso}:${u.code}`, u]));
  * so the whitelist does not have to list a unit before it can appear.
  */
 const OVERRIDE = { SDN: process.env.SDN_ADM1 ?? '/home/claude/dl/sdn/adm1.geojson' };
+
+/** Twice the signed area of a ring: positive is counterclockwise. */
+function signedArea(r) {
+  let a = 0;
+  for (let i = 0; i < r.length - 1; i++) a += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1];
+  return a;
+}
+
+/**
+ * Makes an override's rings wind the way the rest of this dataset does.
+ *
+ * Natural Earth winds outer rings clockwise. geoBoundaries follows the GeoJSON
+ * right-hand rule and winds them counterclockwise. Both are valid files and
+ * both draw correctly in a 2D map, which triangulates either way — so the
+ * detail map showed Sudan perfectly while the globe, which extrudes each
+ * polygon and builds its side walls from the ring direction, turned the
+ * country into a fan of spikes. Mixing the two conventions in one dataset is
+ * the bug; the fix is to pick the one already in use.
+ */
+function matchWinding(geometry) {
+  const fix = (poly) => poly.map((ring, i) => {
+    const ccw = signedArea(ring) > 0;
+    // Outer ring clockwise, holes counterclockwise.
+    return (i === 0 ? ccw : !ccw) ? [...ring].reverse() : ring;
+  });
+  if (geometry.type === 'Polygon') return { ...geometry, coordinates: fix(geometry.coordinates) };
+  return { ...geometry, coordinates: geometry.coordinates.map(fix) };
+}
 const overridden = new Set(Object.keys(OVERRIDE));
 const extra = [];
 for (const [iso, file] of Object.entries(OVERRIDE)) {
@@ -48,7 +76,7 @@ for (const [iso, file] of Object.entries(OVERRIDE)) {
     const code = f.properties.shapeISO;
     // Abyei carries no ISO code because no single state administers it.
     if (!code || code === 'N/A') { console.log(`skipped, no ISO code: ${f.properties.shapeName}`); continue; }
-    extra.push({ type: 'Feature', properties: { iso, code, name: f.properties.shapeName }, geometry: f.geometry });
+    extra.push({ type: 'Feature', properties: { iso, code, name: f.properties.shapeName }, geometry: matchWinding(f.geometry) });
   }
   console.log(`override: ${iso} from ${file} (${extra.length} units)`);
 }

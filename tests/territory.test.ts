@@ -196,6 +196,35 @@ describe('territorial control data', () => {
     expect(where([30.22, 13.18])).toEqual(['SD-KN']); // El Obeid, North Kordofan
   });
 
+  /**
+   * Every outer ring has to wind the same way.
+   *
+   * Natural Earth winds outer rings clockwise; geoBoundaries follows the
+   * GeoJSON right-hand rule and winds them counterclockwise. Both files are
+   * valid and both draw correctly on the 2D map, which triangulates either
+   * way. The globe does not: it extrudes each polygon and builds the side
+   * walls from the ring direction, so a country whose rings run the other way
+   * renders as a fan of spikes across the map. Mixing conventions is invisible
+   * in the data and loud on screen, which is exactly what a test is for.
+   */
+  it('winds every outer ring the same way, so the globe can extrude them', () => {
+    type Geom = { type: string; coordinates: number[][][] | number[][][][] };
+    const units = admin1 as { iso: string; code: string; geometry: Geom }[];
+    const twiceArea = (r: number[][]) => {
+      let a = 0;
+      for (let i = 0; i < r.length - 1; i++) a += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1];
+      return a;
+    };
+    const wrong: string[] = [];
+    for (const u of units) {
+      const polys = (u.geometry.type === 'Polygon'
+        ? [u.geometry.coordinates]
+        : u.geometry.coordinates) as number[][][][];
+      for (const poly of polys) if (twiceArea(poly[0]) > 0) wrong.push(`${u.iso}:${u.code}`);
+    }
+    expect(wrong, `outer rings wound counterclockwise: ${wrong.join(', ')}`).toEqual([]);
+  });
+
   it('the geometry is real administrative geography, not drawn by hand', () => {
     const units = admin1 as { iso: string; code: string; name: string; geometry: { type: string; coordinates: number[][][][] } }[];
     expect(units.length).toBe(152);
