@@ -43,8 +43,13 @@ import { panelExpanded } from '../store';
 function fillOpacity(scale: number, quietUkraine = false): maplibregl.ExpressionSpecification {
   // Where labelled control polygons are drawn, Ukraine's oblast tint drops to
   // a trace: still there to click, no longer painting the same claim twice.
+  // A unit the atlas's own records assess as wholly occupied keeps its tint —
+  // Crimea is outside the OCHA planning units, and must not turn blank.
+  const quiet: maplibregl.ExpressionSpecification = ['all',
+    ['==', ['get', 'region'], 'ukraine'],
+    ['any', ['!=', ['get', 'status'], 'control'], ['==', ['get', 'actor'], 'ua-gov']]];
   const v = (o: number): maplibregl.ExpressionSpecification | number =>
-    quietUkraine ? ['case', ['==', ['get', 'region'], 'ukraine'], 0.03, o * scale] : o * scale;
+    quietUkraine ? ['case', quiet, 0.03, o * scale] : o * scale;
   return ['interpolate', ['linear'], ['zoom'], 4, v(0.45), 7, v(0.3), 9, v(0.12), 11, v(0.06)] as maplibregl.ExpressionSpecification;
 }
 
