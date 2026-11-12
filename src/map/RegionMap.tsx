@@ -11,6 +11,7 @@ import { SNAPSHOT_YEAR, useStore } from '../store';
 import { useT } from '../i18n';
 import { MAP_STYLES, adapterStyle, altitudeToZoom, fallbackStyle, loadStyle, satelliteUrl, webgl2Available, zoomToAltitude, type MapStyleId } from './styles';
 import { addBaseDetail, addBaseLabels, DETAIL_META } from './basedetail';
+import { addMmrLayers, addMmrSiteLabels, bindMmrPopup, MMR_SITE_LAYERS, mmrLayerIds } from './mmrlayers';
 import { loadWorld, type CountryFeature } from '../data/countries';
 import { resolveGlyphRequest } from './glyphs';
 import { LABEL_MIN_ZOOM, attackFC, belligerentFC, conflictFC, contactFC, frontlineFC, placeFC, territoryFC, type LabelDensity } from './overlays';
@@ -59,6 +60,10 @@ export default function RegionMap() {
   const conflictId = sel?.kind === 'conflict' ? sel.id : null;
   const conflictRef = useRef<string | null>(null);
   conflictRef.current = conflictId;
+  // The popup is bound once but has to answer in whatever language is current
+  // when it is opened, so it reads the language through a ref.
+  const langRef = useRef(lang);
+  langRef.current = lang;
 
   // ── Create once ──────────────────────────────────────────────────────────
   // Note the lazy initialiser: useRef evaluates its argument on every render,
@@ -137,6 +142,10 @@ export default function RegionMap() {
     // The bundled base goes in first, so every conflict layer added below
     // draws on top of it.
     addBaseDetail(m);
+    // Myanmar's townships sit directly on the base map: they are the lowest
+    // overlay, so the front line, markers and labels all stay readable over
+    // them. They draw only where Myanmar is, so other regions are unaffected.
+    addMmrLayers(m);
 
     const src = (id: string, data: unknown) => { if (!m.getSource(id)) m.addSource(id, { type: 'geojson', data: data as never }); };
     src('belligerent', belligerentFC(viewBounds(m), world.current, conflictRef.current));
@@ -191,6 +200,7 @@ export default function RegionMap() {
     // Settlement names go on after the conflict layers, so a city label is
     // never hidden under a control polygon.
     addBaseLabels(m, true);
+    addMmrSiteLabels(m, lang);
 
     add({
       id: 'attack-pt', type: 'circle', source: 'attacks',
@@ -225,6 +235,10 @@ export default function RegionMap() {
 
     if (bound.current) return;
     bound.current = true;
+    // Myanmar answers in a popup rather than the side panel: the claim being
+    // made is about one township, and about 270 of the 330 carry no claim at
+    // all. The popup says which of the two the reader just clicked.
+    bindMmrPopup(m, () => langRef.current);
     for (const [layer, kind] of [['attack-pt', 'attack'], ['place-pt', 'place'], ['conflict-pt', 'conflict'], ['terr-fill', 'territory']] as const) {
       m.on('click', layer, (e) => {
         const f = e.features?.[0];
@@ -241,6 +255,11 @@ export default function RegionMap() {
     if (!m.isStyleLoaded() || !m.getLayer('terr-fill')) return;
     const vis = (id: string, on: boolean) => m.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('terr-fill', layers.territories); vis('terr-line', layers.territories);
+    // Myanmar's townships answer the same question as the control layer, so
+    // they follow the same switch. The two named sites are impact, not
+    // control, and follow the impact switch instead.
+    for (const id of mmrLayerIds()) if (m.getLayer(id)) vis(id, layers.territories);
+    for (const id of MMR_SITE_LAYERS) if (m.getLayer(id)) vis(id, layers.links);
     vis('contact-line', layers.fronts);
     vis('frontline-case', layers.sourceline);
     vis('frontline-line', layers.sourceline);
@@ -277,7 +296,22 @@ export default function RegionMap() {
     (m.getSource('conflicts') as maplibregl.GeoJSONSource | undefined)?.setData(conflictFC(year, lang, SNAPSHOT_YEAR) as never);
   }, [year, lang, worldReady, conflictId]);
 
-  useEffect(() => { const m = map.current; if (m) paint(m); });
+  // Visibility is reapplied after every render, but a render can land while
+  // MapLibre is mid-style-update, and paint bails out in that case. Without a
+  // retry the bail-out is permanent until something else triggers a render:
+  // switching a control layer off and straight back on left it hidden, because
+  // the second paint arrived during the style update the first one caused.
+  // Waiting for idle costs nothing when the style is already loaded.
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    paint(m);
+    if (m.isStyleLoaded()) return;
+    let done = false;
+    const retry = () => { if (!done) { done = true; paint(m); } };
+    m.once('idle', retry);
+    return () => { done = true; m.off('idle', retry); };
+  });
 
   // ── Style switching, keeping position and overlays ───────────────────────
   useEffect(() => {

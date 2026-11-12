@@ -971,3 +971,26 @@ ul.cmplist li { display: flex; flex-direction: column; gap: 2px; border-left: 2p
 .edge-tab.right span { transform: rotate(180deg); }
 .edge-tab:hover { color: var(--txt); border-color: rgba(120, 170, 230, .5); background: rgba(16, 26, 44, .95); }
 .edge-tab:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+/* ── Myanmar township popup ───────────────────────────────────────────────
+   A click on a Myanmar township has to answer two different questions: what
+   the layers on it assert, or — for about 270 of the 330 — that the atlas has
+   no sourced assignment for it. Both answers get the same panel treatment as
+   the rest of the interface, so the map does not open a browser-default white
+   box in the middle of a dark one. */
+.mmr-popup .maplibregl-popup-content {
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; font-family: var(--body);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+.mmr-popup .maplibregl-popup-tip { border-top-color: var(--panel); border-bottom-color: var(--panel); }
+.mmr-popup .maplibregl-popup-close-button { color: var(--dim); font-size: 14px; padding: 2px 6px; }
+.mmr-popup .maplibregl-popup-close-button:hover { color: var(--text); background: transparent; }
+.mmr-pop > b { font-family: var(--display); font-size: 14px; letter-spacing: .02em; display: block; }
+.mmr-pop > span { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.mmr-pop p { margin: 8px 0 0; font-size: 11px; line-height: 1.45; color: var(--text); }
+.mmr-pop p b { font-size: 11px; }
+.mmr-pop p em { color: var(--dim); font-style: normal; font-size: 10px; }
+.mmr-pop p i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: baseline; }
+.mmr-pop .mmr-none { color: var(--dim); }

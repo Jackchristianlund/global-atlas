@@ -25,6 +25,7 @@ const REGIONS = {
   libya:     [ 9.0, 19.0, 26.0, 34.0],
   drc:       [11.5, -14.0, 32.5,  6.0],
   palestine: [33.8, 29.2, 36.2, 33.5],
+  myanmar:   [91.8,  9.0, 101.6, 28.8],
 };
 
 const bboxes = Object.values(REGIONS);

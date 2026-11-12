@@ -1,14 +1,16 @@
 import type { Source } from '../types';
 
 /** Date this snapshot was compiled. Nothing in the app is newer than this. */
-export const SNAPSHOT_DATE = '2026-11-11';
+export const SNAPSHOT_DATE = '2026-11-12';
 
 const W = 'Wikipedia (crowd-edited; secondary source)';
 
 /**
  * Every statement in the dataset points to one or more of these records.
- * `date` is the source's own publication or data date, not the date we read it
- * (all were read on SNAPSHOT_DATE).
+ * `date` is the source's own publication or data date, not the date we read it.
+ * Where a source carries no publication date of its own — a crowd-edited page,
+ * a standing organisation profile — the date given is the day it was read, and
+ * that is never later than SNAPSHOT_DATE.
  */
 export const SOURCES: Record<string, Source> = {
   // ── Conflict reference lists ────────────────────────────────────────────
@@ -159,6 +161,32 @@ export const SOURCES: Record<string, Source> = {
   wikiKherson22: { title: '2022 Kherson counteroffensive (occupation shares, mid-2022)', publisher: W, url: 'https://en.wikipedia.org/wiki/2022_Kherson_counteroffensive', date: '2026-11-10' },
   wikiLibyaCF: { title: 'Libyan Civil War (2014–2020) and the October 2020 ceasefire', publisher: W, url: 'https://en.wikipedia.org/wiki/Libyan_civil_war_(2014%E2%80%932020)', date: '2026-11-10' },
   ne10m: { title: 'Natural Earth 1:10m Admin 1 \u2013 States, Provinces', publisher: 'Natural Earth (public domain), via nvkelso/natural-earth-vector', url: 'https://github.com/nvkelso/natural-earth-vector', date: '2026-11-10' },
+
+  // ── Myanmar: townships, martial law, autonomous areas ───────────────────
+  gbMmr: { title: 'Myanmar township boundaries (ADM3), gbOpen release, built from The Myanmar Analytics Project / USAID', publisher: 'geoBoundaries (CC BY 4.0)', url: 'https://www.geoboundaries.org/', date: '2023-12-12' },
+  dmgMartial: { title: 'Junta extends martial law in 55 townships, including AA-held areas', publisher: 'Development Media Group (Arakan)', url: 'https://www.dmediag.com/news/jemli.html', date: '2026-10-19' },
+  imnaMartial: { title: 'Myanmar Junta Imposes Martial Law on 60 Townships (township list by state)', publisher: 'Independent Mon News Agency', url: 'https://monnews.org/2026/04/30/myanmar-junta-imposes-martial-law-on-60-townships/', date: '2026-04-30' },
+  taipeiMartial: { title: 'Myanmar\u2019s government locks down 60 townships', publisher: 'Reuters, via Taipei Times', url: 'https://www.taipeitimes.com/News/front/archives/2026/04/25/2003856205', date: '2026-04-25' },
+  ispMmrML: { title: 'Townships Declared Under Martial Law (per-state breakdown of the 60)', publisher: 'ISP-Myanmar', url: 'https://ispmyanmar.com/2026mp017/', date: '2026-05-11' },
+  ispMmrAA: { title: 'Territories Under the Control of ULA/AA (mapping)', publisher: 'ISP-Myanmar', url: 'https://ispmyanmar.com/category/isp-mapping/', date: '2026-08-17' },
+  ispMmrReview: { title: 'The State of Myanmar: Annual Strategic Review and Foresight 2025\u20132026', publisher: 'ISP-Myanmar', url: 'https://ispmyanmar.com/community/wp-content/uploads/2026/02/M2026_003_Eng.pdf', date: '2026-02-01' },
+  ispMmrFdi: { title: 'MAF\u2019s Offensives Expand into FDI Territories (towns lost and retaken)', publisher: 'ISP-Myanmar', url: 'https://ispmyanmar.com/2026st-04/', date: '2026-08-04' },
+  ispNdaa: { title: 'National Democratic Alliance Army (NDAA) \u2013 organisation profile', publisher: 'ISP-Myanmar', url: 'https://ispmyanmar.com/national-democratic-alliance-army-ndaa/', date: '2026-11-12' },
+  mpmTowns: { title: 'The Junta\u2019s Campaign to Recapture Resistance-Controlled Towns (towns held, by state; airstrike counts)', publisher: 'BNI \u2013 Myanmar Peace Monitor', url: 'https://mmpeacemonitor.org/en/eng-cover-story/the-juntas-campaign-to-recapture-resistance-controlled-towns/', date: '2026-05-19' },
+  wikiAAterr: { title: 'Territory of the Arakan Army (township capture record)', publisher: W, url: 'https://en.wikipedia.org/wiki/Territory_of_the_Arakan_Army', date: '2026-11-12' },
+  wikiUwsa: { title: 'United Wa State Army (constitutional townships of the Wa Self-Administered Division)', publisher: W, url: 'https://en.wikipedia.org/wiki/United_Wa_State_Army', date: '2026-11-12' },
+  shanWaSad: { title: 'Will the Wa Self-Administrative Division participate? (the six townships; Special Regions 2 and 4 since the 1989 ceasefire)', publisher: 'Shan Herald Agency for News', url: 'https://english.shannews.org/archives/20121', date: '2020-11-04' },
+  rfaHopang: { title: 'MNDAA seized Pang Long and Hopang; UWSA troops entered afterwards', publisher: 'Radio Free Asia, republished by GlobalSecurity.org', url: 'https://www.globalsecurity.org/wmd/library/news/myanmar/2024/myanmar-240111-rfa01.htm', date: '2024-01-11' },
+  convMmr: { title: 'As the Myanmar junta\u2019s hold on power weakens, could the devastating war be nearing a conclusion? (attributes the 21% figure to the BBC\u2019s late-2024 study)', publisher: 'The Conversation', url: 'https://theconversation.com/as-the-myanmar-juntas-hold-on-power-weakens-could-the-devastating-war-be-nearing-a-conclusion-247987', date: '2026-05-20' },
+  soufanMmr: { title: 'Just A Matter of Time? The Enduring but Weakening Grip of Myanmar\u2019s Junta (21% attributed to BBC data)', publisher: 'The Soufan Center', url: 'https://thesoufancenter.org/intelbrief-2025-march-6/', date: '2025-03-06' },
+  asiaTimesMmr: { title: 'Myanmar\u2019s \u2018no single government\u2019 line is doing the junta\u2019s work (on which trackers converge on ~21%)', publisher: 'Asia Times', url: 'https://asiatimes.com/2026/07/myanmars-no-single-government-line-is-doing-the-juntas-work/', date: '2026-07-22' },
+  btiMmr: { title: 'BTI 2026 Myanmar Country Report (rival township claims, and that they are hard to verify)', publisher: 'Bertelsmann Stiftung', url: 'https://bti-project.org/en/reports/country-report/MMR', date: '2026-01-01' },
+  dandcRee: { title: 'Myanmar: A hidden source of China\u2019s most critical minerals', publisher: 'D+C Development and Cooperation', url: 'https://www.dandc.eu/en/article/myanmar-rare-earths-kachin-china', date: '2026-05-01' },
+  jamestownRee: { title: 'Militias Assist PRC-Based Ventures Mining Rare Earth Elements in Myanmar', publisher: 'The Jamestown Foundation', url: 'https://jamestown.org/militias-assist-prc-based-ventures-mining-rare-earth-elements-in-myanmar/', date: '2025-12-19' },
+  reexRee: { title: 'Trade-press reporting on the Kachin heavy rare-earth belt, relaying a UN report on new mining sites and the terbium price move', publisher: 'Rare Earth Exchanges (trade publication)', url: 'https://rareearthexchanges.com/news/myanmar-rebel-rare-earth-mining/', date: '2026-08-26' },
+  apScam: { title: 'Takeaways from the AP report on Myanmar\u2019s crackdown on cyberscam centers (C4ADS satellite review of 21 compounds)', publisher: 'Associated Press, via KVUE', url: 'https://www.kvue.com/article/syndication/associatedpress/takeaways-from-the-associated-press-report-on-myanmars-crackdown-on-cyberscam-centers/616-2cab8129-858b-4b6b-a2a2-d87711c662af', date: '2025-12-18' },
+  irrawaddyScam: { title: 'New Scam Hubs Rise in BGF Areas Near Myawaddy Despite \u2018Crackdown\u2019', publisher: 'The Irrawaddy', url: 'https://www.irrawaddy.com/news/burma/new-scam-hubs-rise-in-bgf-areas-near-myawaddy-despite-crackdown.html', date: '2026-02-23' },
+  prachataiScam: { title: 'The Myawaddy Scammer Crackdown: The Compounds Are Gone, but the Networks Remain', publisher: 'Prachatai English', url: 'https://prachataienglish.com/node/12023', date: '2026-08-28' },
 
   // ── Base map ────────────────────────────────────────────────────────────
   ne: { title: 'Natural Earth 1:110m Admin 0 – Countries (via world-atlas)', publisher: 'Natural Earth (public domain)', url: 'https://www.naturalearthdata.com/', date: '2023-01-01' },

@@ -158,6 +158,8 @@ export const S = {
   ak_jihadist: ['Jihadistisk gruppe', 'Jihadist group'],
   lg_terr: ['Territoriell kontroll', 'Territorial control'],
   lg_terrNote: ['Fargen viser hvilken aktør som kontrollerer enheten. Stiplet kant betyr omstridt eller delt kontroll.', 'The colour shows which actor controls the unit. A dashed edge means contested or split control.'],
+  lg_mmr: ['Myanmar: townships', 'Myanmar: townships'],
+  lg_mmrNote: ['Myanmar tegnes på township-nivå, fordi det er enheten kildene faktisk fordeler. Fylt flate betyr at noen forvalter området. Stiplet kant betyr en rettslig status erklært av staten, ikke kontroll. Rundt 270 av 330 townships står uten lag, fordi ingen kilde fordeler dem med en oppdatert dato.', 'Myanmar is drawn at township level, because that is the unit the sources actually assign. A filled area means someone administers it. A dashed outline means a legal status declared by the state, not control. Around 270 of 330 townships carry no layer, because no source assigns them at a current date.'],
   sym_front: ['Frontlinjeområde (navngitt og datert)', 'Front-line area (named and dated)'],
   sym_place: ['By eller strategisk sted', 'City or strategic place'],
   l_displacement: ['Fordrivelse av mennesker', 'Refugee displacement'],

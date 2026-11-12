@@ -1,5 +1,6 @@
 import { EVENT_COLOR, REL_COLOR } from '../data';
 import { ACTORS, REGION } from '../data/territory';
+import { MMR_LAYERS } from '../data/mmr';
 import { STATUS_COLOR } from '../lib/selectors';
 import { CATEGORIES, CATEGORY_COLOR } from '../lib/attacks';
 import { useStore } from '../store';
@@ -58,6 +59,19 @@ export default function Legend() {
             ))}
           </ul>
         ))}
+        {/* Myanmar is drawn at township level and its marks mean different
+            things from the control fills above: a fill is an administration, a
+            dashed outline is a legal designation. That has to be stated. */}
+        <h4>{t('lg_mmr')}</h4>
+        <p className="meta">{t('lg_mmrNote')}</p>
+        <ul>
+          {MMR_LAYERS.map((l) => (
+            <li key={l.id}>
+              <i className={l.fill ? 'sw box' : 'sw line dashed'} style={{ background: l.color }} />
+              {tl(l.name)}
+            </li>
+          ))}
+        </ul>
         <h4>{t('lg_status')}</h4>
         <ul>
           {(['tier4', 'tier3', 'tier2', 'tier1', 'ceasefire', 'flashpoint', 'historic'] as const).map((k) => (
