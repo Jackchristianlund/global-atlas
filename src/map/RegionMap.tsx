@@ -419,7 +419,11 @@ export default function RegionMap() {
 
   /** Visibility and opacity, driven by the same layer controls as the globe. */
   function paint(m: MLMap) {
-    if (!m.isStyleLoaded() || !m.getLayer('terr-fill')) return;
+    // The layers being present is what matters. isStyleLoaded() also waits for
+    // every tile source, so on a busy map (relief, imagery) it can stay false
+    // for seconds and a change — the control layer arriving, a slider moved —
+    // would be skipped until the next render.
+    if (!m.getLayer('terr-fill') || !m.getLayer('ctl-fill')) return;
     const vis = (id: string, on: boolean) => m.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('terr-fill', layers.territories); vis('terr-line', layers.territories);
     // Myanmar's townships answer the same question as the control layer, so
@@ -481,7 +485,9 @@ export default function RegionMap() {
   // ── Data that depends on the year or language ────────────────────────────
   useEffect(() => {
     const m = map.current;
-    if (!m || !m.isStyleLoaded()) return;
+    // Sources present is enough to swap their data; waiting for every tile to
+    // load would drop a year change made while the map is still drawing.
+    if (!m || !m.getSource('terr')) return;
     (m.getSource('terr') as maplibregl.GeoJSONSource | undefined)?.setData(territoryFC(year) as never);
     (m.getSource('contact') as maplibregl.GeoJSONSource | undefined)?.setData(contactFC(year, undefined, hideContact) as never);
     (m.getSource('frontline') as maplibregl.GeoJSONSource | undefined)?.setData(frontlineFC(frontline.set) as never);
@@ -497,8 +503,8 @@ export default function RegionMap() {
   useEffect(() => {
     const m = map.current;
     if (!m) return;
-    if (m.isStyleLoaded()) { pushHistory(m); return; }
-    const retry = () => pushHistory(m);
+    if (m.getSource('cmp')) { pushHistory(m); paint(m); return; }
+    const retry = () => { pushHistory(m); paint(m); };
     m.once('idle', retry);
     return () => { m.off('idle', retry); };
   }, [cmpState, monthState, control]);
