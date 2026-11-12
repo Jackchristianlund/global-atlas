@@ -33,3 +33,18 @@ Retry later and check before trusting anything: a month's objectids must match
 the full listing, and two different months must not return identical geometry.
 That second check is what caught this — March came back byte-for-byte identical
 to January, which is not something a moving front line does.
+
+## Update, 12–13 November 2026: the service answers correctly again
+
+Checked from an ordinary browser (not this build workspace, whose proxy still
+refuses `gis.unocha.org`): every filtered query now returns its own month.
+For all eleven months the objectids returned for `month_number=N` match the
+unfiltered listing exactly (January 8–11, February 12–18, … November 95–102),
+and no two months return identical geometry.
+
+The app therefore fetches the monthly series live, from the reader's browser,
+for both the month scrubber and the new two-date comparison. Nothing for
+February–November is bundled: the workspace cannot reach the service to
+store and re-verify a copy, and transcribing ~60 KB of coordinates by hand
+would be exactly the kind of unverifiable copy this README warns against.
+When the service cannot be reached, the comparison says so and draws nothing.

@@ -18,18 +18,25 @@ export type MapStyleId = 'conflict' | 'standard' | 'terrain' | 'satellite' | 'hy
 export interface MapStyle {
   id: MapStyleId;
   label: L;
-  /** `live` works as shipped; `needs_key` needs a provider and a key. */
-  state: 'live' | 'needs_key';
+  /**
+   * `live` is a vector style that works as shipped. `imagery` is built around
+   * a satellite imagery provider (see `imageryProvider`), which works as
+   * shipped on a non-commercial source and switches to a licensed commercial
+   * one when the build supplies a key.
+   */
+  state: 'live' | 'imagery';
   /** Style document URL, for the live ones. */
   url?: string;
   provider: L;
   licence: L;
   /** Shown on the map, as the data licence requires. */
   attribution: string;
-  /** What has to be supplied before this style works. */
+  /** What has to be supplied for commercial use, or for real relief. */
   needs?: L;
-  /** Env var read at build time to switch the adapter on. */
+  /** Env var read at build time to switch the commercial provider on. */
   envKey?: string;
+  /** Whether this style draws shaded relief from the terrain tiles. */
+  relief?: number;
 }
 
 const OFM_ATTR = '© OpenStreetMap contributors · OpenFreeMap';
@@ -41,6 +48,20 @@ const ODBL: L = [
 
 import { GLYPHS_URL } from './glyphs';
 
+/**
+ * Shaded relief from Mapzen's Terrain Tiles on AWS Open Data.
+ *
+ * No key and no bill: the tiles are an open dataset assembled from public
+ * elevation sources (SRTM, GMTED2010, ETOPO1 and others), served from S3, and
+ * their documentation asks for attribution rather than a licence fee.
+ */
+export const DEM = {
+  tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+  encoding: 'terrarium' as const,
+  maxzoom: 12,
+  attribution: 'Relieff: Mapzen Terrain Tiles / AWS Open Data (SRTM, GMTED2010, ETOPO1 m.fl.)',
+};
+
 export const MAP_STYLES: Record<MapStyleId, MapStyle> = {
   // The default for a regional view: muted enough that control polygons,
   // contact lines and incident markers stay the loudest thing on screen.
@@ -48,86 +69,243 @@ export const MAP_STYLES: Record<MapStyleId, MapStyle> = {
     id: 'conflict', state: 'live',
     label: ['Konfliktkart', 'Conflict map'],
     url: 'https://tiles.openfreemap.org/styles/positron',
-    provider: OFM, licence: ODBL, attribution: OFM_ATTR,
+    provider: OFM, licence: ODBL, attribution: OFM_ATTR, relief: 0.22,
   },
   standard: {
     id: 'standard', state: 'live',
     label: ['Standardkart', 'Standard map'],
     url: 'https://tiles.openfreemap.org/styles/bright',
-    provider: OFM, licence: ODBL, attribution: OFM_ATTR,
+    provider: OFM, licence: ODBL, attribution: OFM_ATTR, relief: 0.18,
   },
   terrain: {
     id: 'terrain', state: 'live',
     label: ['Terreng', 'Terrain'],
     url: 'https://tiles.openfreemap.org/styles/liberty',
-    provider: OFM, licence: ODBL, attribution: OFM_ATTR,
-    needs: [
-      'Viser landformer, vann og veier, men ikke høydeskygge. Ekte relieff krever en terrengflisleverandør med nøkkel.',
-      'Shows landforms, water and roads, but no hillshading. Real relief needs a terrain tile provider with a key.',
-    ],
+    provider: OFM, licence: ODBL, attribution: OFM_ATTR, relief: 0.55,
   },
   satellite: {
-    id: 'satellite', state: 'needs_key',
+    id: 'satellite', state: 'imagery',
     label: ['Satellitt', 'Satellite'],
-    provider: ['Ikke valgt', 'Not selected'],
+    provider: ['Se bildeleverandør', 'See imagery provider'],
     licence: [
-      'Satellittbilder som kan brukes kommersielt må lisensieres. Gratisnivåene hos de fleste leverandørene tillater ikke annonse- eller abonnementsfinansiert bruk.',
-      'Satellite imagery for commercial use has to be licensed. Most providers’ free tiers do not permit advertising- or subscription-funded use.',
+      'Bildene kommer fra leverandøren som er satt opp for denne bygget. Uten nøkkel brukes Sentinel-2 cloudless 2016 fra EOX, som er gratis for ikke-kommersiell bruk.',
+      'The imagery comes from the provider configured for this build. Without a key it is EOX’s Sentinel-2 cloudless 2016, which is free for non-commercial use.',
     ],
     attribution: '',
     needs: [
-      'En flis-URL og en nøkkel fra en leverandør hvis vilkår tillater kommersiell bruk. Sett VITE_SATELLITE_URL.',
-      'A tile URL and a key from a provider whose terms permit commercial use. Set VITE_SATELLITE_URL.',
+      'For kommersiell bruk: sett VITE_SATELLITE_PROVIDER (maptiler, esri, mapbox eller stadia) og VITE_SATELLITE_KEY med en lisensiert nøkkel.',
+      'For commercial use: set VITE_SATELLITE_PROVIDER (maptiler, esri, mapbox or stadia) and VITE_SATELLITE_KEY with a licensed key.',
     ],
-    envKey: 'VITE_SATELLITE_URL',
+    envKey: 'VITE_SATELLITE_PROVIDER',
   },
   hybrid: {
-    id: 'hybrid', state: 'needs_key',
+    id: 'hybrid', state: 'imagery',
     label: ['Hybrid', 'Hybrid'],
-    provider: ['Ikke valgt', 'Not selected'],
+    provider: ['Se bildeleverandør', 'See imagery provider'],
     licence: [
-      'Satellittbilder med navn og veier over. Krever samme lisens som satellittstilen.',
-      'Satellite imagery with names and roads over it. Needs the same licence as the satellite style.',
+      'Satellittbilder med veier og navn fra OpenFreeMap over. Bildene har samme lisens som satellittstilen.',
+      'Satellite imagery with roads and names from OpenFreeMap over it. The imagery carries the same licence as the satellite style.',
     ],
     attribution: OFM_ATTR,
     needs: [
-      'Samme flis-URL som satellittstilen. Navnelaget kommer fra OpenFreeMap og er allerede på plass.',
-      'The same tile URL as the satellite style. The label layer comes from OpenFreeMap and is already in place.',
+      'Samme nøkkel som satellittstilen. Veiene og navnene kommer fra OpenFreeMap og er allerede på plass.',
+      'The same key as the satellite style. Roads and names come from OpenFreeMap and are already in place.',
     ],
-    envKey: 'VITE_SATELLITE_URL',
+    envKey: 'VITE_SATELLITE_PROVIDER',
   },
 };
 
 export const STYLE_ORDER: MapStyleId[] = ['conflict', 'standard', 'terrain', 'satellite', 'hybrid'];
 
-/** The imagery URL an adapter style needs, when the build supplies one. */
-export const satelliteUrl = (): string | null =>
-  (import.meta.env?.VITE_SATELLITE_URL as string | undefined)?.trim() || null;
+// ── Satellite imagery ────────────────────────────────────────────────────
 
-/** Whether a style can actually be shown in this build. */
-export function styleAvailable(id: MapStyleId): boolean {
-  const s = MAP_STYLES[id];
-  return s.state === 'live' || satelliteUrl() !== null;
+export type ImageryId = 'eox2016' | 'maptiler' | 'esri' | 'mapbox' | 'stadia' | 'custom';
+
+export interface ImageryProvider {
+  id: ImageryId;
+  name: string;
+  tiles: string[];
+  /** Logical tile size. 512-pixel sources and @2x tiles stay sharp on high-DPI screens. */
+  tileSize: number;
+  maxzoom: number;
+  attribution: string;
+  /** Whether the terms of the service as configured permit commercial use. */
+  commercial: boolean;
+  /** When the pictures were taken, as far as the provider says. */
+  captured: L;
+  resolution: L;
 }
 
 /**
- * A style document for the adapter styles, built around the configured
- * imagery. Returns null when nothing is configured, so the caller can say so
- * instead of showing an empty map.
+ * The imagery to use. Without configuration it is EOX's Sentinel-2 cloudless
+ * mosaic for 2016, the one year EOX publishes under CC BY 4.0. Its hosted
+ * tile service is free for non-commercial use only, which is what this
+ * unmonetised build is; before any monetisation the build must name a
+ * commercial provider, or self-host the CC BY tiles. `commercial` says which.
+ *
+ * Pictures from 2016–17 show the ground before the 2022 invasion. That is
+ * stated wherever the imagery is shown: a satellite view on a war map is read
+ * as current unless it says otherwise.
  */
-export function adapterStyle(id: MapStyleId): object | null {
-  const url = satelliteUrl();
-  if (!url) return null;
-  const raster = {
-    version: 8 as const,
-    sources: {
-      sat: { type: 'raster' as const, tiles: [url], tileSize: 256, attribution: 'Satellite imagery provider' },
-    },
-    layers: [{ id: 'sat', type: 'raster' as const, source: 'sat' }],
+export function imageryProvider(env: Record<string, string | undefined> = (import.meta.env ?? {}) as never): ImageryProvider {
+  const key = env.VITE_SATELLITE_KEY?.trim();
+  const id = (env.VITE_SATELLITE_PROVIDER?.trim().toLowerCase() ?? '') as ImageryId | '';
+  const custom = env.VITE_SATELLITE_URL?.trim();
+  const attrOverride = env.VITE_SATELLITE_ATTRIBUTION?.trim();
+  const current: L = ['Varierer, oppgitt av leverandøren', 'Varies; stated by the provider'];
+  const sub: L = ['Under 1 m i mange områder', 'Under 1 m in many areas'];
+  let p: ImageryProvider | null = null;
+  if (id === 'maptiler' && key) {
+    p = { id, name: 'MapTiler Satellite', tiles: [`https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=${encodeURIComponent(key)}`], tileSize: 512, maxzoom: 20,
+      attribution: '© MapTiler © OpenStreetMap contributors', commercial: true, captured: current, resolution: sub };
+  } else if (id === 'esri' && key) {
+    p = { id, name: 'Esri World Imagery', tiles: [`https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${encodeURIComponent(key)}`], tileSize: 256, maxzoom: 19,
+      attribution: 'Powered by Esri · Esri World Imagery and its data providers', commercial: true, captured: current, resolution: sub };
+  } else if (id === 'mapbox' && key) {
+    p = { id, name: 'Mapbox Satellite', tiles: [`https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=${encodeURIComponent(key)}`], tileSize: 256, maxzoom: 19,
+      attribution: '© Mapbox © Maxar', commercial: true, captured: current, resolution: sub };
+  } else if (id === 'stadia' && key) {
+    p = { id, name: 'Stadia Alidade Satellite', tiles: [`https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}@2x.jpg?api_key=${encodeURIComponent(key)}`], tileSize: 256, maxzoom: 20,
+      attribution: '© Stadia Maps and its imagery providers', commercial: true, captured: current, resolution: sub };
+  } else if (custom) {
+    // Kept for builds configured the earlier way. Whoever supplies the URL
+    // vouches for its licence; the attribution should come with it.
+    p = { id: 'custom', name: 'Configured imagery', tiles: [custom], tileSize: 256, maxzoom: 19,
+      attribution: 'Satellite imagery provider', commercial: true, captured: current, resolution: sub };
+  }
+  if (p) return attrOverride ? { ...p, attribution: attrOverride } : p;
+  return {
+    id: 'eox2016', name: 'Sentinel-2 cloudless 2016 (EOX)',
+    tiles: ['https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg'],
+    tileSize: 256, maxzoom: 15,
+    attribution: 'Sentinel-2 cloudless – s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016 & 2017)',
+    commercial: false,
+    captured: ['2016–2017 – før invasjonen i 2022', '2016–2017 – before the 2022 invasion'],
+    resolution: ['10 m', '10 m'],
   };
-  if (id === 'satellite') return raster;
-  // Hybrid puts OpenFreeMap's names and roads over the imagery.
-  return { ...raster, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf' };
+}
+
+/** The imagery URL a commercial provider was configured with, if any. */
+export const satelliteUrl = (): string | null => {
+  const p = imageryProvider();
+  return p.id === 'eox2016' ? null : p.tiles[0];
+};
+
+/** Whether a style can actually be shown in this build. Every style can now. */
+export function styleAvailable(id: MapStyleId): boolean {
+  return !!MAP_STYLES[id];
+}
+
+/**
+ * A style document for the imagery styles. Satellite is the imagery alone;
+ * hybrid lays OpenFreeMap's roads, boundaries and names over it, taken from
+ * a loaded OpenFreeMap style (`labels`) so the names are the same ones the
+ * vector styles show.
+ */
+export function adapterStyle(id: MapStyleId, labels?: { sources?: Record<string, unknown>; layers?: { id: string; type: string; 'source-layer'?: string }[]; glyphs?: string; sprite?: unknown } | null): object | null {
+  const p = imageryProvider();
+  const sat = { type: 'raster' as const, tiles: p.tiles, tileSize: p.tileSize, maxzoom: p.maxzoom, attribution: p.attribution };
+  const base = {
+    version: 8 as const,
+    glyphs: glyphsUrl(),
+    sources: { sat } as Record<string, unknown>,
+    layers: [
+      { id: 'bg', type: 'background' as const, paint: { 'background-color': '#0A1018' } },
+      { id: 'sat', type: 'raster' as const, source: 'sat', paint: { 'raster-fade-duration': 150 } },
+    ] as object[],
+  };
+  if (id === 'satellite' || !labels?.layers) return base;
+  // Hybrid: roads, rail, boundaries and every label from the vector style.
+  const keep = labels.layers.filter((l) =>
+    l.type === 'symbol' || (l.type === 'line' && /^(transportation|boundary)$/.test(l['source-layer'] ?? '')));
+  return {
+    ...base,
+    glyphs: labels.glyphs ?? base.glyphs,
+    ...(labels.sprite ? { sprite: labels.sprite } : {}),
+    sources: { ...labels.sources, sat },
+    layers: [...base.layers, ...keep.map((l) => tuneForImagery(l))],
+  };
+}
+
+/** Labels and roads read over imagery only with a dark halo and lighter roads. */
+function tuneForImagery<T extends { type: string; paint?: Record<string, unknown> }>(l: T): T {
+  if (l.type === 'symbol') {
+    return { ...l, paint: { ...l.paint, 'text-color': '#F2F6FB', 'text-halo-color': 'rgba(8,12,20,.85)', 'text-halo-width': 1.5 } };
+  }
+  return { ...l, paint: { ...l.paint, 'line-opacity': 0.55 } };
+}
+
+// ── Making the vector styles read better ───────────────────────────────
+
+type Expr = unknown;
+
+/** Multiplies the numbers a size expression produces, leaving its shape alone. */
+export function scaleSize(v: Expr, k: number): Expr {
+  if (typeof v === 'number') return Math.round(v * k * 10) / 10;
+  if (Array.isArray(v) && v[0] === 'interpolate' && Array.isArray(v[2]) && v[2][0] === 'zoom') {
+    return v.map((x, i) => (i >= 3 && i % 2 === 0 ? scaleSize(x, k) : x));
+  }
+  if (Array.isArray(v) && v[0] === 'step' && Array.isArray(v[1]) && v[1][0] === 'zoom') {
+    return v.map((x, i) => (i === 2 || (i > 2 && i % 2 === 0) ? scaleSize(x, k) : x));
+  }
+  return v;
+}
+
+interface StyleDoc { layers?: { id: string; type: string; 'source-layer'?: string; layout?: Record<string, unknown>; paint?: Record<string, unknown> }[]; sources?: Record<string, unknown> }
+
+/**
+ * Small, deliberate changes to the OpenFreeMap styles so the base map reads
+ * at a glance under the conflict layers: labels a step larger with a firmer
+ * halo, and — on the muted conflict style, whose roads were close to the
+ * colour of the land — roads a few shades darker. Nothing is added to the
+ * map's content; this is presentation only.
+ */
+export function enhanceStyle<T extends object>(doc: T, id: MapStyleId): T {
+  const d = doc as unknown as StyleDoc;
+  if (!d.layers) return doc;
+  const layers = d.layers.map((l) => {
+    if (l.type === 'symbol' && l.layout?.['text-field'] !== undefined) {
+      const layout = { ...l.layout, 'text-size': scaleSize(l.layout['text-size'] ?? 12, 1.1) };
+      const halo = typeof l.paint?.['text-halo-width'] === 'number' ? (l.paint['text-halo-width'] as number) : 0;
+      return { ...l, layout, paint: { ...l.paint, 'text-halo-width': Math.max(halo, 1.3) } };
+    }
+    if (id === 'conflict' && l.type === 'line' && l['source-layer'] === 'transportation') {
+      const paint = { ...l.paint };
+      if (/casing/.test(l.id)) paint['line-color'] = '#B4BCC8';
+      else if (/subtle/.test(l.id)) paint['line-color'] = 'hsla(215,12%,68%,0.85)';
+      else if (/minor/.test(l.id)) paint['line-color'] = 'hsl(215,8%,82%)';
+      else if (/^railway(?!.*dashline)/.test(l.id)) paint['line-color'] = '#C3C7CE';
+      return { ...l, paint };
+    }
+    return l;
+  });
+  return { ...doc, layers } as T;
+}
+
+/**
+ * Adds shaded relief to a style, under its water, roads and labels so it
+ * shapes the land without darkening anything drawn on it.
+ */
+export function withRelief<T extends object>(doc: T, exaggeration: number): T {
+  const d = doc as unknown as StyleDoc;
+  if (!d.layers || exaggeration <= 0) return doc;
+  const at = d.layers.findIndex((l) => /^water/.test(l.id) || l['source-layer'] === 'water' || l['source-layer'] === 'transportation' || l.type === 'symbol');
+  const relief = {
+    id: 'ga-relief', type: 'hillshade', source: 'ga-dem',
+    paint: {
+      'hillshade-exaggeration': exaggeration,
+      'hillshade-shadow-color': '#4B5466',
+      'hillshade-highlight-color': '#FFFFFF',
+      'hillshade-accent-color': '#6D7686',
+    },
+  };
+  const layers = [...d.layers];
+  layers.splice(at < 0 ? layers.length : at, 0, relief as never);
+  return {
+    ...doc,
+    sources: { ...d.sources, 'ga-dem': { type: 'raster-dem', tiles: DEM.tiles, encoding: DEM.encoding, tileSize: 256, maxzoom: DEM.maxzoom, attribution: DEM.attribution } },
+    layers,
+  } as T;
 }
 
 /**

@@ -136,6 +136,13 @@ export const SOURCES: Record<string, Source> = {
   ofac: { title: 'Sanctions Programs and Country Information', publisher: 'U.S. Treasury, Office of Foreign Assets Control', url: 'https://ofac.treasury.gov/sanctions-programs-and-country-information', date: '2026-11-09' },
 
   // ── Territorial control ─────────────────────────────────────────────────
+  wikiSalif: { title: 'Port of Salif', publisher: W, url: 'https://en.wikipedia.org/wiki/Port_of_Salif', date: '2026-11-12' },
+  logRasIsa: { title: 'Yemen Logistics Capacity Assessment: Port of Ras Isa', publisher: 'Logistics Cluster (WFP)', url: 'https://d10.dlca.logcluster.org/node/2072', date: '2026-11-12' },
+  gbYemAdm2: { title: 'Yemen administrative boundaries, districts (ADM2), 2021 — CSO and OCHA Yemen via geoBoundaries (CC BY 3.0 IGO)', publisher: 'geoBoundaries / OCHA Yemen', url: 'https://www.geoboundaries.org/countryDownloads.html', date: '2023-12-12' },
+  nePlaces: { title: 'Natural Earth 1:10m populated places (public domain)', publisher: 'Natural Earth', url: 'https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-populated-places/', date: '2026-11-11' },
+  ochaFlHistory: { title: 'UKR_Front_Line_FLC, layer 8: monthly front line 2026 (ISW / AEI Critical Threats Project, republished by OCHA)', publisher: 'UN OCHA', url: 'https://gis.unocha.org/server/rest/services/Hosted/UKR_Front_Line_FLC/FeatureServer/8', date: '2026-11-12' },
+  ochaFlNow: { title: 'UKR_Front_Line, layer 0: current front line (ISW / AEI Critical Threats Project, republished by OCHA)', publisher: 'UN OCHA', url: 'https://gis.unocha.org/server/rest/services/Hosted/UKR_Front_Line/FeatureServer/0', date: '2026-11-11' },
+  iswMaps: { title: 'Interactive map: Russia’s invasion of Ukraine', publisher: 'Institute for the Study of War & Critical Threats Project', url: 'https://understandingwar.org/', date: '2026-11-12' },
   ajYemenMaps: { title: 'Yemen: Maps show 10 years of changing control', publisher: 'Al Jazeera (AJLabs)', url: 'https://www.aljazeera.com/news/2026/10/20/yemen-maps-show-10-years-of-changing-control', date: '2026-10-20' },
   wikiYem2026: { title: '2026 Yemen offensives', publisher: W, url: 'https://en.wikipedia.org/wiki/2026_Yemen_offensives', date: '2026-11-09' },
   wikiYemMap: { title: 'File:Yemeni Civil War.svg (control map citing ISW News interactive map)', publisher: 'Wikimedia Commons, after ISW News', url: 'https://commons.wikimedia.org/wiki/File:Yemeni_Civil_War.svg', date: '2026-11-02' },

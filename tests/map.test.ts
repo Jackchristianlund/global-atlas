@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MAP_STYLES, STYLE_ORDER, altitudeToZoom, fallbackStyle, glyphsUrl, styleAvailable, zoomToAltitude,
+  MAP_STYLES, STYLE_ORDER, altitudeToZoom, fallbackStyle, glyphsUrl, imageryProvider, styleAvailable, zoomToAltitude,
 } from '../src/map/styles';
 import { DETAIL_META } from '../src/map/basedetail';
 import { GLYPH_FACES, resolveGlyphRequest } from '../src/map/glyphs';
@@ -33,13 +33,16 @@ describe('map styles', () => {
     }
   });
 
-  it('marks the adapters unavailable until a provider is configured', () => {
-    expect(styleAvailable('conflict')).toBe(true);
-    expect(styleAvailable('standard')).toBe(true);
-    expect(styleAvailable('terrain')).toBe(true);
-    // No VITE_SATELLITE_URL in this build.
-    expect(styleAvailable('satellite')).toBe(false);
-    expect(styleAvailable('hybrid')).toBe(false);
+  it('offers every style, with imagery on a non-commercial source until a key is configured', () => {
+    for (const id of STYLE_ORDER) expect(styleAvailable(id), id).toBe(true);
+    // No VITE_SATELLITE_PROVIDER in this build: the imagery is EOX's 2016
+    // mosaic, whose hosted service is for non-commercial use only, and the
+    // provider says so rather than passing as licensed.
+    const p = imageryProvider({});
+    expect(p.id).toBe('eox2016');
+    expect(p.commercial).toBe(false);
+    expect(p.attribution).toMatch(/EOX/);
+    expect(p.captured[1]).toMatch(/before the 2022 invasion/);
   });
 
   it('defaults the regional view to the muted conflict style', () => {

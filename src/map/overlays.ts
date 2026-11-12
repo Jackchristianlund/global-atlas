@@ -33,6 +33,7 @@ export function territoryFC(year: number, region?: string): FC {
         geometry: f.geometry,
         properties: {
           id: f.properties.id,
+          region: f.properties.region,
           name: f.properties.unitName,
           actor: f.properties.record.actor,
           status: f.properties.record.status,
@@ -44,11 +45,31 @@ export function territoryFC(year: number, region?: string): FC {
   );
 }
 
+/**
+ * Where the derived line of contact is not drawn.
+ *
+ * The derived line is the stretch of administrative border between two units
+ * assessed as held by different actors. That is a fair summary where nothing
+ * better exists, but it is a boundary, not a front:
+ *
+ * - **Yemen** has no continuous front line, and its governorate borders are
+ *   not military lines. Drawing them as one would turn administrative
+ *   geography into an invented front, so Yemen never gets the derived line.
+ * - **Ukraine** has the sourced ISW/CTP line. Wherever that line is on the
+ *   map for the year being shown, an oblast border painted the same way next
+ *   to it would only compete with the real thing.
+ */
+export function derivedContactHidden(region: string, year: number, sourcedLineShown: boolean, sourcedYear: number): boolean {
+  if (region === 'yemen') return true;
+  if (region === 'ukraine' && sourcedLineShown && year === sourcedYear) return true;
+  return false;
+}
+
 /** The derived line of contact, as line strings. */
-export function contactFC(year: number, region?: string): FC {
+export function contactFC(year: number, region?: string, hide?: (region: string) => boolean): FC {
   return fc(
     contactLines(year)
-      .filter((c) => !region || c.region === region)
+      .filter((c) => (!region || c.region === region) && !(hide && hide(c.region)))
       .map((c) => ({
         type: 'Feature' as const,
         id: c.id,
@@ -166,3 +187,55 @@ export function conflictFC(year: number, lang: Lang, snapshotYear: number): FC {
 export type LabelDensity = 'low' | 'normal' | 'high';
 
 export const LABEL_MIN_ZOOM: Record<LabelDensity, number> = { low: 9, normal: 6, high: 0 };
+
+// ── November 2026 phase: comparison, regional reference, shipping ────────
+
+const line = (id: string, coords: number[][], props: Record<string, unknown>) =>
+  ({ type: 'Feature' as const, id, geometry: { type: 'LineString', coordinates: coords }, properties: { id, ...props } });
+
+/** [lat, lng] paths to GeoJSON [lng, lat] lines. */
+const ll = (path: number[][]) => path.map(([lat, lng]) => [lng, lat]);
+
+/**
+ * Two dated front lines, as the source drew them, tagged by which side of the
+ * comparison each belongs to.
+ */
+export function compareFC(a: number[][][] | null, b: number[][][] | null): FC {
+  const out: FC['features'] = [];
+  (a ?? []).forEach((seg, i) => out.push(line(`cmp-a-${i}`, ll(seg), { role: 'a' })));
+  (b ?? []).forEach((seg, i) => out.push(line(`cmp-b-${i}`, ll(seg), { role: 'b' })));
+  return fc(out);
+}
+
+/** The stretches where the two lines are further apart than the data resolves. */
+export function diffFC(stretches: { path: number[][]; maxKm: number; of: 'a' | 'b' }[]): FC {
+  return fc(stretches.map((s, i) => line(`diff-${i}`, ll(s.path), { of: s.of, km: Math.round(s.maxKm * 10) / 10 })));
+}
+
+/** One month of the published series, when it is being shown on its own. */
+export function monthFC(segments: number[][][] | null): FC {
+  return fc((segments ?? []).map((seg, i) => line(`month-${i}`, ll(seg), {})));
+}
+
+/** Yemen's district outlines: administrative reference, never control. */
+export function districtFC(d: { lines: number[][][]; labels: { n: string; at: number[] }[] }): { lines: FC; labels: FC } {
+  return {
+    lines: fc([{ type: 'Feature', id: 'yem-districts', geometry: { type: 'MultiLineString', coordinates: d.lines }, properties: {} }]),
+    labels: fc(d.labels.map((l, i) => ({ type: 'Feature' as const, id: `yd-${i}`, geometry: { type: 'Point', coordinates: l.at }, properties: { n: l.n } }))),
+  };
+}
+
+/** Yemen's ports and cities, for orientation. */
+export function sitesFC(sites: { id: string; name: string; at: [number, number]; kind: string }[]): FC {
+  return fc(sites.map((s) => ({ type: 'Feature' as const, id: s.id, geometry: { type: 'Point', coordinates: [s.at[1], s.at[0]] }, properties: { id: s.id, name: s.name, kind: s.kind } })));
+}
+
+/** Shipping lanes and pipelines, drawn on the map as on the globe. */
+export function routesFC(routes: { id: string; kind: string; pts: [number, number][]; computed: boolean }[]): FC {
+  return fc(routes.map((r) => line(`rt-${r.id}`, r.pts.map(([lat, lng]) => [lng, lat]), { rid: r.id, kind: r.kind, computed: r.computed })));
+}
+
+/** Maritime chokepoints. */
+export function chokepointFC(points: { id: string; name: string; at: [number, number] }[]): FC {
+  return fc(points.map((p) => ({ type: 'Feature' as const, id: p.id, geometry: { type: 'Point', coordinates: [p.at[1], p.at[0]] }, properties: { id: p.id, name: p.name } })));
+}

@@ -162,6 +162,65 @@ after a globe → map → globe trip).
 **Costs.** Nothing is paid today. OpenFreeMap is free and has no key. A satellite
 licence is the only cost this phase would add, and it is optional.
 
+## Visual polish and regional explorers (13 November 2026)
+
+No renderer change: react-globe.gl for the globe, MapLibre for the detailed map.
+
+**The globe as centrepiece.** The resting distance is solved from the space
+between the panels (`src/lib/framing.ts`) instead of a fixed altitude: about
+30% larger on a 1600×900 desktop and 32% on 2560×1311, never taller than the
+stage. It re-centres when a panel is folded or the right panel widens. The
+right panel is compact (340 px) for the overview and widens (420 px) when
+something is selected. The camera read-out moved to the top right, out from
+under the south pole. The compact legend can be folded to one line.
+
+**Readability.** The smallest text moved up a step (10→11 px, 11→12 px). Long
+timeline titles get a wider card and the full title in a popover above the
+strip; the strip can be filtered by event type.
+
+**Ukraine.** A regional explorer opens in the conflict panel: how to read the
+map (assessed line, control summary and its share, partial/contested units as
+uncertainty, comparison colours), clickable sources with assessment dates, and
+a **comparison of any two monthly front lines** (January–November 2026, or the
+current line). The comparison measures where the two lines are more than 3 km
+apart — twice the service's generalisation — highlights those stretches and
+frames the map on them, with a list of stretches to step through. It reports
+how far the line moved, never who gained ground: the source does not label
+sides. The derived oblast-border "contact line" is no longer drawn for the year
+the sourced ISW/CTP line covers. On the tile base map, the bundled urban fill
+and duplicate names are hidden, so the vector map's own roads and labels read
+cleanly; labels are a step larger with firmer halos, and roads on the conflict
+style a few shades darker.
+
+**Yemen.** A regional explorer states the limitation first — no licensed
+control geometry, governorate-level assessments only, districts are
+administrative — then the three parties with their governorate counts, every
+governorate's dated assessment, the assessment years (2014, 2025, 2026), ports
+and cities (Ras Isa and As-Salif added with sources), Bab el-Mandeb and a
+Red Sea shipping view, and the documented events. All 333 districts are drawn
+as thin dashed reference lines (CSO/OCHA 2021, CC BY 3.0 IGO) with names at
+close zoom. The derived governorate-border contact line is **never** drawn for
+Yemen: an administrative border is not a front.
+
+**Imagery.** Shaded relief from the open AWS Terrain Tiles on the vector styles.
+Satellite and Hybrid now work: by default on EOX Sentinel-2 cloudless 2016,
+labelled with its capture years and its non-commercial service terms; with a
+key, on MapTiler, Esri, Mapbox or Stadia (`docs/IMAGERY.md`). Hybrid lays
+OpenFreeMap's roads and names over the imagery.
+
+**Exploration.** Quick links to Ukraine and Yemen beside the globe/map switch;
+the selected conflict's units outlined on the map; search suggestions before
+typing, arrow-key navigation, and city results from the bundled gazetteer;
+shareable links (`#v=…&m=map&c=…&z=…&y=…&s=…&l=…&st=…&fc=…`) that restore
+view, camera, year, selection, layers, style and comparison; a "Share view"
+button; a short crossfade into the map; on phones the map-style controls fold
+away and conflict framing uses the real screen width.
+
+**Not done, and why.** No district-level control for Yemen (no licensed
+source). The monthly front lines are fetched live, not bundled (see
+`src/data/frontline/history/README.md`). Live deployment and real-browser
+verification of this build need the changes pushed to `main`.
+
 ## Data sources and licensing
 
 | Source | Use | Licence / access | Status |
@@ -223,7 +282,9 @@ That is a pre-launch task, not a completed one — see blockers.
 
 ## Tests
 
-146 tests across 15 files. They cover geometry, selectors, the server ingest
+301 tests across 26 files (272 before this phase, all still passing; the one
+existing assertion that satellite was unavailable was updated to the new
+default). Earlier description: 146 tests across 15 files. They cover geometry, selectors, the server ingest
 pipeline, the relationship graph, tracing, SSR and DOM rendering, territorial
 control and its time series, displacement corridors, the UCDP event pipeline,
 the attacks dataset, and the Free/Pro rules — including that no essential

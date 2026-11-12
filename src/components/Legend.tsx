@@ -3,7 +3,8 @@ import { ACTORS, REGION } from '../data/territory';
 import { MMR_LAYERS } from '../data/mmr';
 import { STATUS_COLOR } from '../lib/selectors';
 import { CATEGORIES, CATEGORY_COLOR } from '../lib/attacks';
-import { useStore } from '../store';
+import { useState } from 'react';
+import { remember, useStore } from '../store';
 import { useT } from '../i18n';
 import type { EventType, RelType } from '../types';
 
@@ -19,6 +20,25 @@ export default function Legend() {
   const { t, tl } = useT();
   const open = useStore((s) => s.legendOpen);
   const setOpen = useStore((s) => s.setLegendOpen);
+  // The compact key can be folded to one line by a reader who knows it, so
+  // the larger globe has the corner back. It starts open, and the choice is
+  // remembered.
+  const [mini, setMini] = useState<boolean>(() => {
+    try { return localStorage.getItem('ga.legendMini') !== '0'; } catch { return true; }
+  });
+  const foldMini = (v: boolean) => { setMini(v); remember('ga.legendMini', v ? '1' : '0'); };
+  if (!open && !mini) {
+    return (
+      <aside className="legend-mini folded" aria-label={t('legend')}>
+        <button type="button" className="legend-more" onClick={() => foldMini(true)} aria-expanded={false}>
+          <i className="sw dot" style={{ background: STATUS_COLOR.tier4 }} />
+          <i className="sw box" style={{ background: 'rgba(77,140,255,.55)' }} />
+          <i className="sw box" style={{ background: 'rgba(214,69,61,.55)' }} />
+          {t('legend')} ▴
+        </button>
+      </aside>
+    );
+  }
   if (!open) {
     // A compact key that is always on screen. The full legend is one click
     // away, but the handful of marks a reader needs to make sense of the globe
@@ -36,9 +56,12 @@ export default function Legend() {
           <li><i className="sw line" style={{ background: '#00D9FF' }} />{t('lg_rt_computed')}</li>
           <li><i className="sw line dashed" style={{ background: '#00D9FF' }} />{t('lg_rt_drawn')}</li>
         </ul>
-        <button type="button" className="legend-more" onClick={() => setOpen(true)} aria-expanded={false}>
-          ⊞ {t('legend')}
-        </button>
+        <div className="legend-mini-foot">
+          <button type="button" className="legend-more" onClick={() => setOpen(true)} aria-expanded={false}>
+            ⊞ {t('legend')}
+          </button>
+          <button type="button" className="legend-more" onClick={() => foldMini(false)} aria-label={t('hidePanel')} title={t('hidePanel')}>▾</button>
+        </div>
       </aside>
     );
   }

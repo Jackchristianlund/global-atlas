@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { useT, fmtDate } from '../i18n';
 import { ageInDays } from '../lib/frontline';
 import { HISTORY_MONTHS, HISTORY_YEAR, monthDate } from '../lib/frontlineHistory';
-import { SNAPSHOT_DATE } from '../data/sources';
+import { SNAPSHOT_DATE, SOURCES } from '../data/sources';
 
 /**
  * The provenance of the front line, on screen rather than in a tooltip.
@@ -88,11 +88,18 @@ export default function FrontlineTicket() {
         <div className="fl-body">
           <MonthScrub />
           <dl className="fl-rows">
-            <div><dt>{t('fl_assessed')}</dt><dd>{fmtDate(meta.assessmentDate, lang)}{Number.isFinite(age) && age > 0 ? ` · ${age} ${t('fl_age')}` : ''}</dd></div>
-            <div><dt>{t('sources')}</dt><dd>ISW / CTP · OCHA</dd></div>
+            <div><dt>{t('fl_assessed')}</dt><dd><a href={SOURCES.ochaFlNow.url} target="_blank" rel="noopener noreferrer">{fmtDate(meta.assessmentDate, lang)}</a>{Number.isFinite(age) && age > 0 ? ` · ${age} ${t('fl_age')}` : ''}</dd></div>
+            <div><dt>{t('sources')}</dt><dd>
+              <a href={SOURCES.iswMaps.url} target="_blank" rel="noopener noreferrer">ISW / CTP</a>{' · '}
+              <a href={SOURCES.ochaFlNow.url} target="_blank" rel="noopener noreferrer">OCHA</a>
+            </dd></div>
             <div><dt>{t('fl_generalized')}</dt><dd>≈{meta.toleranceMetresApprox?.main ?? '—'} m</dd></div>
           </dl>
           <p className="fl-note">{t('fl_unlabelled')}.</p>
+          <button
+            type="button" className="mini fl-cmp"
+            onClick={() => { useStore.getState().select({ kind: 'conflict', id: 'ukr' }); }}
+          >⇄ {t('cmpf_title')}</button>
           {frontline.note ? <p className="fl-warn">{t('fl_offline')}</p> : null}
           <p className="fl-warn">{t('fl_licence')}.</p>
         </div>

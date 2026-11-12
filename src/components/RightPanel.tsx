@@ -20,6 +20,7 @@ import { Ad } from './Commerce';
 import { CompareSection, ContactSection } from './TerritoryPanel';
 import Recent from './Recent';
 import ScenarioLab from './ScenarioLab';
+import { UkraineExplorer, YemenExplorer } from './RegionExplorer';
 
 const CATS: ClaimCat[] = ['escalation', 'ceasefire', 'military', 'human', 'geo', 'econ'];
 
@@ -113,6 +114,8 @@ function ConflictPanel({ id }: { id: string }) {
           <span>{t('openDetailSub')}</span>
         </button>
       )}
+      {id === 'ukr' && <UkraineExplorer />}
+      {id === 'yem' && <YemenExplorer />}
       <Section title={t('sum')}><p>{tl(c.sum)} <Src ids={c.s} /></p></Section>
       <Section title={t('intensityBasis')}>
         {c.tier && c.row ? (
@@ -430,7 +433,7 @@ function IncidentPanel() {
 
 export default function RightPanel() {
   const { t } = useT();
-  const { sel, view, select, disputedId, showDisputed, incidentBin, showIncidentBin, rightOpen, setRightOpen, setCollapsed } = useStore();
+  const { sel, view, select, disputedId, showDisputed, incidentBin, showIncidentBin, rightOpen, setRightOpen, setCollapsed, trace } = useStore();
   const hasSel = sel !== null || disputedId !== null || incidentBin !== null;
   let body;
   if (incidentBin) body = <IncidentPanel />;
@@ -451,7 +454,7 @@ export default function RightPanel() {
     : view === 'conflict' ? <><Dashboard /><Recent /></>
     : <Dashboard />;
   return (
-    <aside className={`panel right${rightOpen ? ' open' : ''}`} aria-label={t('panel')}>
+    <aside className={`panel right ${hasSel || trace.length ? 'expanded' : 'compact'}${rightOpen ? ' open' : ''}`} aria-label={t('panel')}>
       <div className="panel-bar">
         {hasSel ? <button type="button" className="mini" onClick={() => { showDisputed(null); showIncidentBin(null); select(null); }}>← {t('overview')}</button> : <span className="panel-title">{view === 'scenario' ? t('v_scenario') : t('overview')}</span>}
         <button type="button" className="mini only-desktop fold" onClick={() => setCollapsed('right', true)} aria-label={t('hidePanel')} title={t('hidePanel')}>›</button>

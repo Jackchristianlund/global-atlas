@@ -15,10 +15,12 @@ import { STATUS_COLOR, displayStatus, eventsInYear, membersAt, yearOf } from '..
 import { traceLinks } from '../lib/trace';
 import { buildHydro, setHydroOpacity } from '../lib/hydro';
 import { buildFrontMesh, type FrontMesh } from '../lib/frontmesh';
+import { globeOffset, panelInsets, restAltitude } from '../lib/framing';
+import { derivedContactHidden } from '../map/overlays';
 import { REGION_FOR_CONFLICT, belligerentColors, changedUnits, contactLines, frontsOfRegion, lighten, placesOfRegion, regionsWithData, territoryById, territoryFeatures, unitFill, type TerritoryFeature } from '../lib/territory';
 import { ACTOR, REGION } from '../data/territory';
 import { visibleConflicts } from '../lib/visible';
-import { SNAPSHOT_YEAR, useStore } from '../store';
+import { SNAPSHOT_YEAR, panelExpanded, useStore } from '../store';
 import { FLOW, flowWeight, flowsAt } from '../lib/displacement';
 import { isComputed, routeKm, routePoints } from '../lib/routes';
 import { frontlinePaths } from '../lib/frontline';
@@ -249,14 +251,22 @@ export default function GlobeView() {
     // Centred so the active fronts are all legible on arrival rather than
     // squashed against the limb: Ukraine sits in the upper third, with the
     // Middle East, the Sahel and the Horn still square to the camera.
-    const rest = { lat: 36, lng: 33, altitude: size.w < 700 ? 2.9 : 2.15 };
-    if (useStore.getState().lowPower) g.pointOfView(rest, 0);
+    const rest = { lat: 36, lng: 33, altitude: restAlt.current };
+    const linked = useStore.getState().linkedView;
+    if (linked) {
+      // A shared link: its camera wins over the entrance and over the
+      // selection's own framing, which runs first.
+      interacted.current = true;
+      const v = useStore.getState().globeView;
+      window.setTimeout(() => g.pointOfView({ lat: v.lat, lng: v.lng, altitude: v.altitude }, 600), 1250);
+      useStore.setState({ linkedView: false });
+    } else if (useStore.getState().lowPower) g.pointOfView(rest, 0);
     else {
       g.pointOfView({ lat: 8, lng: -4, altitude: 4.6 }, 0);
       window.setTimeout(() => { if (!interacted.current) g.pointOfView(rest, 2400); }, 80);
     }
     setReady(true);
-  }, [size.w, surface]);
+  }, [surface]);
 
   // Slow cloud drift; paused in reduced-graphics mode.
   useEffect(() => {
@@ -315,8 +325,24 @@ export default function GlobeView() {
     wrap.current?.toggleAttribute('data-near', pov.altitude < 0.7);
   }, []);
 
-  // Keep the globe centred in the space between the floating side panels.
-  const offset: [number, number] = size.w > 1180 ? [-69, 0] : size.w > 880 ? [-44, 0] : [0, 0];
+  // Keep the globe centred in the space between the floating side panels, and
+  // as large as that space allows. Both follow the panels: folding the filters
+  // away or opening a selection moves the globe into the room that is left.
+  const leftFolded = useStore((x) => x.leftCollapsed);
+  const rightFolded = useStore((x) => x.rightCollapsed);
+  const expanded = useStore(panelExpanded);
+  const insets = useMemo(() => panelInsets(size.w, { leftFolded, rightFolded, expanded }), [size.w, leftFolded, rightFolded, expanded]);
+  const offset = useMemo(() => globeOffset(insets), [insets]);
+  const restAlt = useRef(2.15);
+  restAlt.current = restAltitude(size.w, size.h, insets);
+  // Until the reader takes the camera, a resize re-frames the resting view so
+  // the globe keeps filling the stage. After that the camera is theirs.
+  useEffect(() => {
+    const g = globe.current;
+    if (!g || !ready || interacted.current || useStore.getState().sel) return;
+    const pov = g.pointOfView();
+    if (Math.abs(pov.altitude - restAlt.current) > 0.04) g.pointOfView({ lat: pov.lat, lng: pov.lng, altitude: restAlt.current }, 500);
+  }, [size.w, size.h, ready, insets]);
 
   useEffect(() => {
     const g = globe.current;
@@ -366,7 +392,7 @@ export default function GlobeView() {
     else if (!sel) {
       // Back to the overview: ease out to the resting distance, keeping the current bearing.
       const pov = g.pointOfView();
-      if (pov.altitude < 1.7) g.pointOfView({ lat: pov.lat, lng: pov.lng, altitude: 2.3 }, 1300);
+      if (pov.altitude < 1.7) g.pointOfView({ lat: pov.lat, lng: pov.lng, altitude: Math.max(restAlt.current, 1.7) }, 1300);
     }
   }, [sel, ready, anchor, year]);
 
@@ -709,6 +735,48 @@ export default function GlobeView() {
     histMesh.current = mesh;
   }, [frontMonthState, layers.sourceline, layerOpacity.sourceline, size.w, size.h]);
 
+  // Two dated assessments compared: the earlier in amber, the later in cyan,
+  // and the stretches where they differ by more than the data resolves in
+  // magenta over both. Same mesh as the sourced line, so the weights match.
+  const cmpState = useStore((st) => st.frontCompareState);
+  const cmpMeshes = useRef<FrontMesh[]>([]);
+  useEffect(() => {
+    const g = globe.current;
+    const scene = histScene.current as { add: (o: object) => void; remove: (o: object) => void } | null;
+    if (!g || !scene) return;
+    for (const m of cmpMeshes.current) { scene.remove(m.group); m.dispose(); }
+    cmpMeshes.current = [];
+    if (cmpState.status !== 'ready' || !layers.sourceline) return;
+    const toLonLat = (segs: number[][][]) => segs.map((seg, i) => ({ id: `c${i}`, coords: seg.map(([lat, lng]) => [lng, lat]) }));
+    const specs: [number[][][], string, number, number][] = [
+      [cmpState.a.segments, '#FFC24D', 2.0, 0.0215],
+      [cmpState.b.segments, '#5CE1FF', 2.0, 0.022],
+      [cmpState.diff.stretches.map((x) => x.path), '#FF5CA8', 4.2, 0.0225],
+    ];
+    for (const [segs, color, width, altitude] of specs) {
+      if (!segs.length) continue;
+      const mesh = buildFrontMesh(toLonLat(segs), {
+        globeRadius: g.getGlobeRadius(), altitude, width, casing: width + 3,
+        color, casingColor: '#0A0D16', opacity: layerOpacity.sourceline,
+      });
+      mesh.setResolution(size.w, size.h);
+      scene.add(mesh.group);
+      cmpMeshes.current.push(mesh);
+    }
+  }, [cmpState, layers.sourceline, layerOpacity.sourceline, size.w, size.h]);
+
+  // A request to frame an area, from the comparison, the region explorers or
+  // the search: fly to its centre at a height that shows all of it.
+  const frame = useStore((st) => st.frame);
+  useEffect(() => {
+    const g = globe.current;
+    if (!g || !ready || !frame || useStore.getState().mapMode !== 'globe') return;
+    const [w, s0, e, n] = frame.bbox;
+    const span = Math.max(e - w, (n - s0) * 1.3);
+    interacted.current = true;
+    g.pointOfView({ lat: (s0 + n) / 2, lng: (w + e) / 2, altitude: Math.min(2.6, Math.max(0.1, span / 38)) }, 1100);
+  }, [frame, ready]);
+
   const paths: PathD[] = useMemo(() => {
     const out: PathD[] = [];
     // Line weights that stay the same on screen at any altitude. The altitude
@@ -779,7 +847,9 @@ export default function GlobeView() {
     // current as the older of the two assessments it sits between — which is
     // the date the label and the panel both show.
     if (layers.territories && layers.fronts) {
+      const srcShown = layers.sourceline;
       for (const c of contactLines(year)) {
+        if (derivedContactHidden(c.region, year, srcShown, SNAPSHOT_YEAR)) continue;
         const sel2 = sel?.kind === 'territory' || sel?.kind === 'actor';
         const hot = sel?.kind === 'actor' && (sel.id === c.a || sel.id === c.b);
         out.push({
@@ -833,7 +903,7 @@ export default function GlobeView() {
       }
     }
     return out;
-  }, [layers.routes, layers.energy, layers.territories, layers.fronts, layerOpacity.routes, layerOpacity.energy, layerOpacity.fronts, view, scenarioId, sel, lang, lowPower, year, compareYear]);
+  }, [layers.sourceline, layers.routes, layers.energy, layers.territories, layers.fronts, layerOpacity.routes, layerOpacity.energy, layerOpacity.fronts, view, scenarioId, sel, lang, lowPower, year, compareYear]);
 
   // ── Cinematic staged reveal of connection arcs on selection ──────────────
   const [reveal, setReveal] = useState(1e9);

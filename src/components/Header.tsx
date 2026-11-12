@@ -7,17 +7,40 @@ import { FLOWS } from '../data/displacement';
 import { useStore } from '../store';
 import { fmtDate, pick, useT } from '../i18n';
 import type { Selection, ViewId } from '../types';
+import { shareUrl } from '../urlSync';
 
 const VIEWS: ViewId[] = ['conflict', 'alliance', 'trade', 'energy', 'human', 'history', 'scenario'];
 
-interface Hit { label: string; kind: string; sel: Selection }
+interface Hit { label: string; kind: string; sel: Selection; at?: [number, number] }
+
+type GazRow = [string, number, number, string, number];
+let gazetteer: GazRow[] | null = null;
+/** The city list loads the first time someone uses the search box, not on every visit. */
+function loadGazetteer(): Promise<GazRow[]> {
+  if (gazetteer) return Promise.resolve(gazetteer);
+  return import('../data/gazetteer.json').then((m) => (gazetteer = (m.default as unknown as GazRow[])));
+}
+
+/** What the box offers before anything is typed: the two regional explorers and their key places. */
+const SUGGEST: { sel: NonNullable<Selection> }[] = [
+  { sel: { kind: 'conflict', id: 'ukr' } },
+  { sel: { kind: 'conflict', id: 'yem' } },
+  { sel: { kind: 'place', id: 'p-kharkiv' } },
+  { sel: { kind: 'place', id: 'p-aden' } },
+  { sel: { kind: 'chokepoint', id: 'bab' } },
+  { sel: { kind: 'country', id: 'SDN' } },
+];
 
 export default function Header() {
   const { t, lang } = useT();
   const s = useStore();
   const [q, setQ] = useState('');
   const [focus, setFocus] = useState(false);
+  const [active, setActive] = useState(0);
+  const [cities, setCities] = useState<GazRow[] | null>(gazetteer);
+  const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (focus && !cities) void loadGazetteer().then(setCities); }, [focus, cities]);
 
   const all: Hit[] = useMemo(() => {
     const out: Hit[] = [];
@@ -37,7 +60,21 @@ export default function Header() {
     return out;
   }, [lang, t]);
 
-  const hits = useMemo(() => (q.trim().length < 2 ? [] : all.filter((h) => matches(h.label, q)).slice(0, 12)), [q, all]);
+  const suggestions: Hit[] = useMemo(() => SUGGEST.map(({ sel }) => all.find((h) => h.sel?.kind === sel.kind && h.sel.id === sel.id)).filter((h): h is Hit => !!h), [all]);
+  const hits = useMemo(() => {
+    if (q.trim().length < 2) return [];
+    const own = all.filter((h) => matches(h.label, q));
+    // Cities from the gazetteer, after the atlas's own records and never
+    // duplicating a place the atlas already carries.
+    const known = new Set(own.map((h) => h.label.toLowerCase()));
+    const city: Hit[] = (cities ?? [])
+      .filter((r) => matches(r[0], q) && !known.has(r[0].toLowerCase()))
+      .slice(0, 6)
+      .map((r) => ({ label: r[0], kind: `${t('sr_city')}${r[3] ? ` · ${r[3]}` : ''}`, sel: null, at: [r[1], r[2]] }));
+    return [...own.slice(0, 12 - Math.min(city.length, 4)), ...city].slice(0, 12);
+  }, [q, all, cities, t]);
+  const shown = q.trim().length >= 2 ? hits : suggestions;
+  useEffect(() => setActive(0), [q]);
 
   // Everything the query matches, not just the twelve shown in the dropdown:
   // the globe dims the rest, and a marker that matched would look wrong going
@@ -56,6 +93,15 @@ export default function Header() {
   }, [q, all]);
 
   const go = (h: Hit) => {
+    if (!h.sel && h.at) {
+      // A city with no record of its own: just take the camera there.
+      const [lat, lng] = h.at;
+      s.frameArea([lng - 0.35, lat - 0.25, lng + 0.35, lat + 0.25]);
+      setQ('');
+      s.setSearch('', new Set());
+      inputRef.current?.blur();
+      return;
+    }
     s.select(h.sel);
     if (h.sel?.kind === 'org') s.setOrg(h.sel.id);
     setQ('');
@@ -99,14 +145,22 @@ export default function Header() {
             onChange={(e) => setQ(e.target.value)}
             onFocus={() => setFocus(true)}
             onBlur={() => window.setTimeout(() => setFocus(false), 150)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && hits[0]) go(hits[0]); if (e.key === 'Escape') setQ(''); }}
+            role="combobox" aria-expanded={focus} aria-controls="search-dd" aria-autocomplete="list"
+            aria-activedescendant={focus && shown[active] ? `sr-${active}` : undefined}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(a + 1, shown.length - 1)); }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
+              else if (e.key === 'Enter' && shown[active]) go(shown[active]);
+              else if (e.key === 'Escape') { setQ(''); inputRef.current?.blur(); }
+            }}
           />
-          {focus && q.trim().length >= 2 && (
-            <ul className="search-dd" role="listbox">
-              {hits.length === 0 && <li className="empty">{t('noHits')}</li>}
-              {hits.map((h, i) => (
-                <li key={i}>
-                  <button type="button" onMouseDown={(e) => { e.preventDefault(); go(h); }}>
+          {focus && (
+            <ul className="search-dd" role="listbox" id="search-dd">
+              {q.trim().length < 2 && <li className="dd-head">{t('sr_suggest')}</li>}
+              {q.trim().length >= 2 && hits.length === 0 && <li className="empty">{t('noHits')}</li>}
+              {shown.map((h, i) => (
+                <li key={i} id={`sr-${i}`} role="option" aria-selected={i === active}>
+                  <button type="button" className={i === active ? 'act' : ''} onMouseEnter={() => setActive(i)} onMouseDown={(e) => { e.preventDefault(); go(h); }}>
                     <span>{h.label}</span><small>{h.kind}</small>
                   </button>
                 </li>
@@ -122,6 +176,18 @@ export default function Header() {
         >
           <span className="fresh-dot" aria-hidden />
           {fmtDate(SNAPSHOT_DATE, lang)} · {t('notRealtime')}
+        </button>
+
+        <button
+          type="button" className={`mini sharebtn${copied ? ' on' : ''}`} title={t('sh_hint')}
+          onClick={() => {
+            const url = shareUrl();
+            const done = () => { setCopied(true); window.setTimeout(() => setCopied(false), 1800); };
+            try { void navigator.clipboard?.writeText(url).then(done, () => { window.prompt(t('sh_copy'), url); }); }
+            catch { window.prompt(t('sh_copy'), url); }
+          }}
+        >
+          {copied ? `✓ ${t('sh_copied')}` : `⤴ ${t('sh_copy')}`}
         </button>
 
         <button

@@ -9,12 +9,19 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { SNAPSHOT_YEAR, useStore } from '../store';
 import { useT } from '../i18n';
-import { MAP_STYLES, adapterStyle, altitudeToZoom, fallbackStyle, loadStyle, satelliteUrl, webgl2Available, zoomToAltitude, type MapStyleId } from './styles';
-import { addBaseDetail, addBaseLabels, DETAIL_META } from './basedetail';
+import { DEM, MAP_STYLES, adapterStyle, altitudeToZoom, enhanceStyle, fallbackStyle, imageryProvider, loadStyle, webgl2Available, withRelief, zoomToAltitude, type MapStyleId } from './styles';
+import { addBaseDetail, addBaseLabels, DETAIL_META, setBaseDetailVisible } from './basedetail';
 import { addMmrLayers, addMmrSiteLabels, bindMmrPopup, MMR_SITE_LAYERS, mmrLayerIds } from './mmrlayers';
 import { loadWorld, type CountryFeature } from '../data/countries';
 import { resolveGlyphRequest } from './glyphs';
-import { LABEL_MIN_ZOOM, attackFC, belligerentFC, conflictFC, contactFC, frontlineFC, placeFC, territoryFC, type LabelDensity } from './overlays';
+import { LABEL_MIN_ZOOM, attackFC, belligerentFC, chokepointFC, compareFC, conflictFC, contactFC, derivedContactHidden, diffFC, districtFC, frontlineFC, monthFC, placeFC, routesFC, sitesFC, territoryFC, type LabelDensity } from './overlays';
+import { REGION_FOR_CONFLICT } from '../lib/territory';
+import { ALL_ROUTES, CHOKEPOINTS } from '../data';
+import { isComputed, routePoints } from '../lib/routes';
+import { YEMEN_SITES } from '../data/yemen/explorer';
+import districts from '../data/yemen/districts.json';
+import { panelInsets } from '../lib/framing';
+import { panelExpanded } from '../store';
 
 /**
  * The detailed regional map.
@@ -47,11 +54,42 @@ function viewBounds(m: MLMap): [number, number, number, number] | null {
   }
 }
 
+/**
+ * Lines that cross the antimeridian jump from +180 to -180; unwrapping keeps
+ * them continuous so MapLibre does not draw them across the whole world.
+ */
+function unwrap(pts: [number, number][]): [number, number][] {
+  const out: [number, number][] = [];
+  let shift = 0;
+  for (let i = 0; i < pts.length; i++) {
+    if (i > 0) {
+      const d = pts[i][1] + shift - out[i - 1][1];
+      if (d > 180) shift -= 360; else if (d < -180) shift += 360;
+    }
+    out.push([pts[i][0], pts[i][1] + shift]);
+  }
+  return out;
+}
+
+const ROUTE_DATA = routesFC(ALL_ROUTES.map((r) => ({ id: r.id, kind: r.kind, pts: unwrap(routePoints(r)), computed: isComputed(r.id) })));
+const DISTRICTS = districtFC(districts as unknown as { lines: number[][][]; labels: { n: string; at: number[] }[] });
+
+/** What the map is drawn on: the bundled base, a vector style, or imagery. */
+type BaseKind = 'bundled' | 'vector' | 'imagery';
+
 export default function RegionMap() {
   const host = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const moving = useRef(false);
   const [baseFailed, setBaseFailed] = useState(false);
+  const baseKind = useRef<BaseKind>('bundled');
+  const [base, setBase] = useState<BaseKind>('bundled');
+  // The map fades in over the globe once it has drawn, rather than cutting
+  // from one to the other.
+  const [shown, setShown] = useState(false);
+  const cmpState = useStore((st) => st.frontCompareState);
+  const monthState = useStore((st) => st.frontMonthState);
+  const frame = useStore((st) => st.frame);
   const bound = useRef(false);
   const { t, lang } = useT();
   const s = useStore();
@@ -60,6 +98,12 @@ export default function RegionMap() {
   const conflictId = sel?.kind === 'conflict' ? sel.id : null;
   const conflictRef = useRef<string | null>(null);
   conflictRef.current = conflictId;
+  // The region of the selected conflict, for the outline on its units.
+  const selRegionRef = useRef<string | null>(null);
+  selRegionRef.current = conflictId ? REGION_FOR_CONFLICT[conflictId] ?? null : null;
+  const sourcedOnRef = useRef(true);
+  sourcedOnRef.current = layers.sourceline;
+  const hideContact = (region: string) => derivedContactHidden(region, year, sourcedOnRef.current, SNAPSHOT_YEAR);
   // The popup is bound once but has to answer in whatever language is current
   // when it is opened, so it reads the language through a ref.
   const langRef = useRef(lang);
@@ -104,6 +148,9 @@ export default function RegionMap() {
       setMapView({ lat: c.lat, lng: c.lng, zoom: m.getZoom() });
     });
     m.on('load', () => { addOverlays(m); paint(m); });
+    m.once('idle', () => setShown(true));
+    // Never wait forever on a slow tile server to show the map.
+    window.setTimeout(() => setShown(true), 1200);
     // Tile and style failures are reported through the notice below, not by
     // filling the console with retries the user cannot act on.
     m.on('error', () => { /* handled by the notice */ });
@@ -137,6 +184,16 @@ export default function RegionMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /** The comparison and the month line, from the latest state rather than a stale closure. */
+  function pushHistory(m: MLMap) {
+    const st = useStore.getState();
+    const c = st.frontCompareState.status === 'ready' ? st.frontCompareState : null;
+    (m.getSource('cmp') as maplibregl.GeoJSONSource | undefined)?.setData(compareFC(c?.a.segments ?? null, c?.b.segments ?? null) as never);
+    (m.getSource('diff') as maplibregl.GeoJSONSource | undefined)?.setData(diffFC(c?.diff.stretches ?? []) as never);
+    const ms = st.frontMonthState;
+    (m.getSource('month') as maplibregl.GeoJSONSource | undefined)?.setData(monthFC(ms.status === 'ready' ? ms.line.segments : null) as never);
+  }
+
   /** Sources and layers, in the order they must stack. */
   function addOverlays(m: MLMap) {
     // The bundled base goes in first, so every conflict layer added below
@@ -150,7 +207,15 @@ export default function RegionMap() {
     const src = (id: string, data: unknown) => { if (!m.getSource(id)) m.addSource(id, { type: 'geojson', data: data as never }); };
     src('belligerent', belligerentFC(viewBounds(m), world.current, conflictRef.current));
     src('terr', territoryFC(year));
-    src('contact', contactFC(year));
+    src('contact', contactFC(year, undefined, hideContact));
+    src('routes', ROUTE_DATA);
+    src('choke', chokepointFC(CHOKEPOINTS.map((c) => ({ id: c.id, name: c.name[lang === 'no' ? 0 : 1], at: c.at }))));
+    src('yem-dist', DISTRICTS.lines);
+    src('yem-dist-label', DISTRICTS.labels);
+    src('yem-sites', sitesFC(YEMEN_SITES.filter((x) => !x.place)));
+    src('month', monthFC(monthState.status === 'ready' ? monthState.line.segments : null));
+    src('cmp', compareFC(cmpState.status === 'ready' ? cmpState.a.segments : null, cmpState.status === 'ready' ? cmpState.b.segments : null));
+    src('diff', diffFC(cmpState.status === 'ready' ? cmpState.diff.stretches : []));
     src('frontline', frontlineFC(frontline.set));
     src('attacks', attackFC(year));
     src('places', placeFC(year));
@@ -179,6 +244,30 @@ export default function RegionMap() {
 
     add({ id: 'terr-fill', type: 'fill', source: 'terr', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': fillOpacity(1) } });
     add({ id: 'terr-line', type: 'line', source: 'terr', paint: { 'line-color': ['get', 'color'], 'line-width': 1.2, 'line-opacity': 0.9 } });
+    // The selected conflict's units, outlined so the reader can see at once
+    // which ground the panel is talking about.
+    add({
+      id: 'terr-sel', type: 'line', source: 'terr', filter: ['==', ['get', 'region'], selRegionRef.current ?? '__none'],
+      layout: { 'line-join': 'round' },
+      paint: { 'line-color': '#7FE3FF', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1.4, 9, 2.6], 'line-opacity': 0.9, 'line-blur': 0.4 },
+    });
+    // Yemen's districts: thin and dashed, administrative reference only. They
+    // are never filled and never coloured by actor, because no sourced
+    // district-level assessment of control exists in this dataset.
+    add({
+      id: 'yem-dist', type: 'line', source: 'yem-dist', minzoom: 5.5,
+      paint: { 'line-color': '#7D8AA0', 'line-width': ['interpolate', ['linear'], ['zoom'], 5.5, 0.4, 10, 1.1], 'line-opacity': ['interpolate', ['linear'], ['zoom'], 5.5, 0, 6.5, 0.55], 'line-dasharray': [2, 2] },
+    });
+    // Shipping lanes and pipelines, for the Red Sea and Bab el-Mandeb above all.
+    // Computed lanes solid, hand-drawn corridors dashed, as on the globe. Two
+    // layers, because a dash pattern cannot vary feature by feature.
+    const routePaint = {
+      'line-color': ['match', ['get', 'kind'], 'oil', '#FFD23F', 'lng', '#7BE0C3', 'rail', '#C9A2FF', 'pipeline', '#FF9B42', '#00D9FF'],
+      'line-width': ['interpolate', ['linear'], ['zoom'], 2, 1.2, 8, 2.6],
+      'line-opacity': 0.85,
+    } as const;
+    add({ id: 'route-line', type: 'line', source: 'routes', filter: ['==', ['get', 'computed'], true], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: routePaint as never });
+    add({ id: 'route-drawn', type: 'line', source: 'routes', filter: ['!=', ['get', 'computed'], true], layout: { 'line-join': 'round' }, paint: { ...routePaint, 'line-dasharray': [3, 2] } as never });
     add({
       id: 'contact-line', type: 'line', source: 'contact',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -196,6 +285,29 @@ export default function RegionMap() {
       id: 'frontline-line', type: 'line', source: 'frontline',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#FFFFFF', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1.1, 10, 3], 'line-opacity': 0.97 },
+    });
+    // One month of the published series, amber where the current line is white.
+    add({
+      id: 'month-line', type: 'line', source: 'month',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#FFC24D', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1.4, 10, 3.4], 'line-opacity': 0.95 },
+    });
+    // Comparison: where the two assessments differ, as a wide soft band under
+    // both lines, then the earlier line dashed amber and the later solid cyan.
+    add({
+      id: 'diff-band', type: 'line', source: 'diff',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#FF5CA8', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 7, 10, 18], 'line-opacity': 0.38, 'line-blur': 2 },
+    });
+    add({
+      id: 'cmp-a', type: 'line', source: 'cmp', filter: ['==', ['get', 'role'], 'a'],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#FFC24D', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1.6, 10, 3.6], 'line-dasharray': [2, 1.4] },
+    });
+    add({
+      id: 'cmp-b', type: 'line', source: 'cmp', filter: ['==', ['get', 'role'], 'b'],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#5CE1FF', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1.6, 10, 3.6] },
     });
     // Settlement names go on after the conflict layers, so a city label is
     // never hidden under a control polygon.
@@ -224,6 +336,32 @@ export default function RegionMap() {
         paint: { 'text-color': '#EAF2FF', 'text-halo-color': 'rgba(7,11,20,.9)', 'text-halo-width': 1.4 },
       });
     }
+    if (m.getStyle().glyphs) {
+      add({
+        id: 'yem-dist-label', type: 'symbol', source: 'yem-dist-label', minzoom: 8.2,
+        layout: { 'text-field': ['get', 'n'], 'text-size': 10.5, 'text-font': ['Noto Sans Regular'], 'text-allow-overlap': false, 'text-padding': 4 },
+        paint: { 'text-color': '#8D9AB0', 'text-halo-color': 'rgba(7,11,20,.8)', 'text-halo-width': 1.2 },
+      });
+    }
+    add({
+      id: 'yem-site', type: 'circle', source: 'yem-sites', minzoom: 4.5,
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 4.5, 3, 10, 5.5],
+        'circle-color': ['match', ['get', 'kind'], 'port', '#00D9FF', '#DCE7F5'],
+        'circle-stroke-color': 'rgba(7,11,20,.9)', 'circle-stroke-width': 1.5,
+      },
+    });
+    if (m.getStyle().glyphs) {
+      add({
+        id: 'yem-site-label', type: 'symbol', source: 'yem-sites', minzoom: 5.2,
+        layout: { 'text-field': ['get', 'name'], 'text-size': 12, 'text-offset': [0, 1.0], 'text-anchor': 'top', 'text-font': ['Noto Sans Regular'] },
+        paint: { 'text-color': '#EAF2FF', 'text-halo-color': 'rgba(7,11,20,.9)', 'text-halo-width': 1.4 },
+      });
+    }
+    add({
+      id: 'choke-pt', type: 'circle', source: 'choke',
+      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 4, 8, 7], 'circle-color': '#00D9FF', 'circle-stroke-color': '#06101C', 'circle-stroke-width': 2, 'circle-opacity': 0.95 },
+    });
     add({
       id: 'conflict-pt', type: 'circle', source: 'conflicts',
       paint: {
@@ -233,13 +371,16 @@ export default function RegionMap() {
       },
     });
 
+    // Whatever the history layers held before a style switch, from the store.
+    pushHistory(m);
+
     if (bound.current) return;
     bound.current = true;
     // Myanmar answers in a popup rather than the side panel: the claim being
     // made is about one township, and about 270 of the 330 carry no claim at
     // all. The popup says which of the two the reader just clicked.
     bindMmrPopup(m, () => langRef.current);
-    for (const [layer, kind] of [['attack-pt', 'attack'], ['place-pt', 'place'], ['conflict-pt', 'conflict'], ['terr-fill', 'territory']] as const) {
+    for (const [layer, kind] of [['attack-pt', 'attack'], ['place-pt', 'place'], ['conflict-pt', 'conflict'], ['choke-pt', 'chokepoint'], ['terr-fill', 'territory']] as const) {
       m.on('click', layer, (e) => {
         const f = e.features?.[0];
         const id = f?.properties?.id as string | undefined;
@@ -267,6 +408,28 @@ export default function RegionMap() {
     vis('place-pt', layers.fronts);
     if (m.getLayer('place-label')) vis('place-label', layers.fronts);
     vis('conflict-pt', layers.conflicts);
+    vis('terr-sel', layers.territories);
+    vis('yem-dist', layers.borders);
+    if (m.getLayer('yem-dist-label')) vis('yem-dist-label', layers.borders);
+    vis('yem-site', layers.fronts);
+    if (m.getLayer('yem-site-label')) vis('yem-site-label', layers.fronts);
+    const kindFilter = layers.routes && layers.energy ? null : layers.routes ? ['!=', ['get', 'kind'], 'pipeline'] : ['==', ['get', 'kind'], 'pipeline'];
+    for (const [id, computed] of [['route-line', true], ['route-drawn', false]] as const) {
+      vis(id, layers.routes || layers.energy);
+      const own = computed ? ['==', ['get', 'computed'], true] : ['!=', ['get', 'computed'], true];
+      m.setFilter(id, (kindFilter ? ['all', own, kindFilter] : own) as never);
+    }
+    vis('choke-pt', layers.chokepoints);
+    for (const id of ['month-line', 'cmp-a', 'cmp-b', 'diff-band']) vis(id, layers.sourceline);
+    m.setFilter('terr-sel', ['==', ['get', 'region'], selRegionRef.current ?? '__none']);
+    // The bundled base draws only where nothing better loaded. Over a vector
+    // style its urban fill and second set of names only muddy the map; over
+    // imagery, which has no names of its own, its labels stay.
+    const k = baseKind.current;
+    setBaseDetailVisible(m, k === 'bundled');
+    if (k === 'imagery' && mapStyle === 'satellite') {
+      for (const id of ['ne-places-dot', 'ne-places-label', 'ne-towns-label']) if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', 'visible');
+    }
     m.setPaintProperty('terr-fill', 'fill-opacity', fillOpacity(layerOpacity.territories));
     m.setPaintProperty('terr-line', 'line-opacity', 0.9 * layerOpacity.territories);
     m.setPaintProperty('contact-line', 'line-opacity', 0.95 * layerOpacity.fronts);
@@ -288,13 +451,40 @@ export default function RegionMap() {
     const m = map.current;
     if (!m || !m.isStyleLoaded()) return;
     (m.getSource('terr') as maplibregl.GeoJSONSource | undefined)?.setData(territoryFC(year) as never);
-    (m.getSource('contact') as maplibregl.GeoJSONSource | undefined)?.setData(contactFC(year) as never);
+    (m.getSource('contact') as maplibregl.GeoJSONSource | undefined)?.setData(contactFC(year, undefined, hideContact) as never);
     (m.getSource('frontline') as maplibregl.GeoJSONSource | undefined)?.setData(frontlineFC(frontline.set) as never);
     (m.getSource('belligerent') as maplibregl.GeoJSONSource | undefined)?.setData(belligerentFC(viewBounds(m), world.current, conflictRef.current) as never);
     (m.getSource('attacks') as maplibregl.GeoJSONSource | undefined)?.setData(attackFC(year) as never);
     (m.getSource('places') as maplibregl.GeoJSONSource | undefined)?.setData(placeFC(year) as never);
     (m.getSource('conflicts') as maplibregl.GeoJSONSource | undefined)?.setData(conflictFC(year, lang, SNAPSHOT_YEAR) as never);
-  }, [year, lang, worldReady, conflictId]);
+  }, [year, lang, worldReady, conflictId, layers.sourceline]);
+
+  // The comparison and the month series, whenever either changes. A change
+  // can land while a style is still loading; then it is applied at idle, so
+  // a finished comparison is never left undrawn.
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    if (m.isStyleLoaded()) { pushHistory(m); return; }
+    const retry = () => pushHistory(m);
+    m.once('idle', retry);
+    return () => { m.off('idle', retry); };
+  }, [cmpState, monthState]);
+
+  // Frame an area someone asked for, leaving room for the floating panels.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !frame) return;
+    const st = useStore.getState();
+    const w = m.getContainer().clientWidth;
+    const ins = panelInsets(w, { leftFolded: st.leftCollapsed, rightFolded: st.rightCollapsed, expanded: panelExpanded(st) });
+    const [west, south, east, north] = frame.bbox;
+    moving.current = false;
+    m.fitBounds([[west, south], [east, north]], {
+      padding: { top: 70, bottom: 70, left: ins.left + 40, right: ins.right + 40 },
+      maxZoom: 11, duration: 900,
+    });
+  }, [frame]);
 
   // Visibility is reapplied after every render, but a render can land while
   // MapLibre is mid-style-update, and paint bails out in that case. Without a
@@ -319,22 +509,29 @@ export default function RegionMap() {
     if (!m) return;
     let cancelled = false;
     const def = MAP_STYLES[mapStyle as MapStyleId];
-    const apply = (doc: object) => {
+    const apply = (doc: object, kind: BaseKind) => {
       if (cancelled) return;
+      baseKind.current = kind;
+      setBase(kind);
       m.once('styledata', () => { if (!cancelled) { addOverlays(m); paint(m); } });
       m.setStyle(doc as never);
     };
+    setBaseFailed(false);
     if (def.state === 'live' && def.url) {
-      setBaseFailed(false);
       void loadStyle(def.url).then((doc) => {
         if (cancelled) return;
-        if (doc) apply(doc);
-        else { setBaseFailed(true); apply(fallbackStyle()); }
+        if (doc) apply(withRelief(enhanceStyle(doc, def.id), def.relief ?? 0), 'vector');
+        else { setBaseFailed(true); apply(fallbackStyle(), 'bundled'); }
+      });
+    } else if (mapStyle === 'hybrid') {
+      // Names and roads come from the terrain style's vector tiles; if that
+      // cannot be reached the imagery still shows, with the bundled names.
+      void loadStyle(MAP_STYLES.terrain.url!).then((doc) => {
+        if (cancelled) return;
+        apply(adapterStyle('hybrid', doc as never) ?? fallbackStyle(), 'imagery');
       });
     } else {
-      const doc = adapterStyle(mapStyle as MapStyleId);
-      // Nothing configured: keep the local base so the layers still read.
-      apply(doc ?? fallbackStyle());
+      apply(adapterStyle(mapStyle as MapStyleId) ?? fallbackStyle(), 'imagery');
     }
     return () => { cancelled = true; };
   }, [mapStyle]);
@@ -351,7 +548,9 @@ export default function RegionMap() {
   }, [mapView]);
 
   const def = MAP_STYLES[mapStyle as MapStyleId];
-  const unavailable = def.state === 'needs_key' && !satelliteUrl();
+  const imagery = def.state === 'imagery' ? imageryProvider() : null;
+  // Credit the district data only while it can actually be on screen.
+  const inYemen = mapView.zoom >= 5.5 && mapView.lng > 40 && mapView.lng < 56 && mapView.lat > 10 && mapView.lat < 20;
   if (!canRender.current) {
     return (
       <div className="mappane">
@@ -363,19 +562,30 @@ export default function RegionMap() {
     );
   }
   return (
-    <div className="mappane">
+    <div className={`mappane${shown ? ' shown' : ''}`}>
       <div ref={host} className="maproot" />
-      {(unavailable || baseFailed) && (
+      {baseFailed && (
         <div className="mapnotice">
           <b>{t(`ms_${mapStyle}` as 'ms_satellite')}</b>
-          <p>{unavailable ? def.needs?.[lang === 'no' ? 0 : 1] : t('ms_offline')}</p>
+          <p>{t('ms_offline')}</p>
         </div>
       )}
-      {/* The bundled base is always drawn, so it is always credited; a tile
-          provider is credited on top of it only when its style actually loaded. */}
+      {/* Imagery says when it was taken, every time it is on screen: on a war
+          map a satellite picture is read as current unless it says otherwise. */}
+      {imagery && (
+        <div className={`imgbadge${imagery.commercial ? '' : ' nc'}`} role="note">
+          <b>{imagery.name}</b>
+          <span>{t('img_captured')}: {imagery.captured[lang === 'no' ? 0 : 1]} · {imagery.resolution[lang === 'no' ? 0 : 1]}</span>
+          {!imagery.commercial && <span className="nc-note">{t('img_noncommercial')}</span>}
+        </div>
+      )}
+      {/* Every source actually on the map is credited, and nothing that is not. */}
       <p className="mapattr">
-        {DETAIL_META.attribution}
-        {!baseFailed && def.attribution ? ` \u00b7 ${def.attribution}` : ''}
+        {base === 'bundled' || mapStyle === 'satellite' ? DETAIL_META.attribution : ''}
+        {base !== 'bundled' && def.attribution ? `${mapStyle === 'satellite' ? ' \u00b7 ' : ''}${def.attribution}` : ''}
+        {imagery ? ` \u00b7 ${imagery.attribution}` : ''}
+        {base === 'vector' && (def.relief ?? 0) > 0 ? ` \u00b7 ${DEM.attribution}` : ''}
+        {layers.borders && inYemen ? ` \u00b7 ${(districts as { meta: { attribution: string } }).meta.attribution}` : ''}
       </p>
     </div>
   );

@@ -994,3 +994,183 @@ ul.cmplist li { display: flex; flex-direction: column; gap: 2px; border-left: 2p
 .mmr-pop p em { color: var(--dim); font-style: normal; font-size: 10px; }
 .mmr-pop p i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: baseline; }
 .mmr-pop .mmr-none { color: var(--dim); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Visual polish and regional explorers (November 2026 phase)
+   Everything below layers on the rules above; nothing above is removed.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Two names used throughout the later rules that were never defined, so
+   those rules fell back to inherited colours. */
+:root { --txt: var(--text); --acc: var(--cyan); }
+
+/* ── Right panel: compact overview, wider for detail ──────────────────────
+   The overview is a handful of figures and needs little width; a selected
+   conflict carries sourced claims and wants room to read. The globe takes
+   back whatever the panel does not use (see lib/framing.ts). */
+@media (min-width: 881px) {
+  .panel.right { transition: width .24s ease; }
+  .panel.right.compact { width: 340px; }
+  .panel.right.expanded { width: 420px; }
+  .mid { --rp: 350px; }
+  .mid:has(.panel.right.expanded) { --rp: 430px; }
+  .mid.rc, .mid.rc:has(.panel.right.expanded) { --rp: 36px; }
+}
+@media (min-width: 881px) and (max-width: 1180px) {
+  .panel.right.compact { width: 320px; }
+  .panel.right.expanded { width: 350px; }
+  .mid { --rp: 330px; }
+  .mid:has(.panel.right.expanded) { --rp: 360px; }
+}
+@media (prefers-reduced-motion: reduce) { .panel.right { transition: none; } }
+.panel.right.compact .stats { gap: 8px; }
+.panel.right.compact .stat { padding: 9px 10px 8px; }
+.panel.right.compact .stat-v { font-size: 23px; }
+
+/* The camera read-out moves out of the way of a larger globe: top right of
+   the stage, beside the panel, instead of under the south pole. */
+@media (min-width: 881px) {
+  .hud { left: auto; right: calc(var(--rp, 350px) + 18px); top: 16px; bottom: auto; transform: none; text-align: right; }
+}
+
+/* ── Readability ──────────────────────────────────────────────────────────
+   The smallest text in the interface moves up a step. 10 px mono was below
+   what reads comfortably on a dark background at normal viewing distance. */
+.legend-mini li { font-size: 12px; }
+.laygroup h4 { font-size: 11px; }
+.kv dt { font-size: 11px; }
+.badge { font-size: 11px; }
+.fl-date, .fl-tier { font-size: 11px; }
+.fl-head strong { font-size: 12px; }
+.fl-ticket { font-size: 12px; }
+.fl-note, .fl-warn { font-size: 11px; }
+.fl-rows dt { font-size: 11px; }
+.fl-rows dd { font-size: 12px; }
+.mapattr { font-size: 11px; }
+.panel-scroll p { font-size: 13.5px; }
+
+/* ── Timeline cards ───────────────────────────────────────────────────────
+   A long title gets a wider card, up to a limit, and the full text in a
+   popover above the strip on hover or focus — the strip scrolls sideways, so
+   growing the card in place would only be clipped. */
+.ev { flex: 0 0 var(--evw, 220px); }
+.ev time { font-size: 12px; }
+.ev:not(:disabled):hover span, .ev:focus-visible span { -webkit-line-clamp: 2; }
+.ev-pop {
+  position: fixed; z-index: 3000; max-width: 360px; pointer-events: none;
+  background: rgba(13,21,37,.97); border: 1px solid var(--hair, var(--line)); border-left: 3px solid var(--c);
+  border-radius: 8px; padding: 8px 11px; box-shadow: 0 12px 34px rgba(0,0,0,.55);
+  font-size: 13.5px; line-height: 1.4; color: var(--text);
+}
+.ev-pop time { display: block; margin-bottom: 3px; }
+.ev-pop small { display: block; margin-top: 5px; color: var(--dim); font-size: 11px; }
+.tl-types { display: flex; gap: 4px; flex: none; }
+.tl-types button {
+  border: 1px solid var(--hair, var(--line)); background: rgba(18,27,44,.62); color: var(--dim);
+  border-radius: 999px; padding: 2px 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 5px;
+}
+.tl-types button i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.tl-types button.on { color: var(--text); border-color: var(--c); background: rgba(0,217,255,.06); }
+.tl-types button:not(.on) i { opacity: .35; }
+@media (max-width: 1380px) { .tl-types { display: none; } }
+
+/* ── Globe ↔ map: a short crossfade instead of a cut ────────────────────── */
+.viewlayer { transition: opacity .35s ease; }
+.mappane { opacity: 0; transition: opacity .4s ease; }
+.mappane.shown { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .viewlayer, .mappane { transition: none; } }
+
+/* ── Quick navigation beside the globe/map switch ───────────────────────── */
+.vs-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.vs-quick button { color: var(--accent-soft); }
+.vs-quick button.on { background: rgba(0,217,255,.14); color: var(--cyan); }
+.vs-modes button:hover { color: var(--text); }
+
+/* ── Share and search ──────────────────────────────────────────────────── */
+.hdr .sharebtn { font-size: 11px; padding: 5px 8px; white-space: nowrap; }
+.sharebtn.on { border-color: rgba(123,224,195,.5); color: #7BE0C3; }
+.search-dd .dd-head { padding: 6px 10px 2px; font: 600 10px/1 var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.search-dd button.act { background: rgba(0,217,255,.12); }
+@media (max-width: 1180px) { .hdr .sharebtn { display: none; } }
+
+/* ── Imagery badge: when the pictures were taken, always on screen ──────── */
+.imgbadge {
+  position: absolute; right: calc(var(--rp, 350px) + 18px); top: 14px; z-index: 6; max-width: 300px;
+  background: rgba(10,16,28,.9); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px;
+  display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--dim);
+}
+.imgbadge b { color: var(--text); font: 600 12px var(--display); letter-spacing: .05em; }
+.imgbadge.nc { border-color: rgba(255,214,120,.35); }
+.imgbadge .nc-note { color: #FFD678; }
+@media (max-width: 880px) { .imgbadge { right: 10px; top: auto; bottom: 64px; max-width: 70vw; } }
+
+/* ── Regional explorers ─────────────────────────────────────────────────── */
+.rx { margin-bottom: 6px; }
+.rx-key { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rx-key li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: start; font-size: 13px; line-height: 1.4; }
+.rx-key li .sw { margin-top: 6px; }
+.rx-key small { display: block; color: var(--dim); font-size: 12px; margin-top: 1px; }
+.rx-key .sw.box { width: 16px; height: 11px; border-radius: 2px; display: inline-block; }
+.rx-key .sw.line { width: 18px; height: 3px; border-radius: 2px; display: inline-block; }
+.rx .sw.fl-sw { display: inline-block; }
+.rx-limit {
+  border: 1px solid rgba(255,214,120,.35); background: rgba(255,214,120,.06); border-radius: 10px;
+  padding: 10px 12px; margin: 0 0 16px;
+}
+.rx-limit b { color: #FFD678; font: 600 13px var(--display); letter-spacing: .06em; text-transform: uppercase; }
+.rx-limit p { margin: 5px 0 0; font-size: 13px; }
+.rx-actors, .rx-units, .rx-events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.rx-actors .rowbtn, .rx-units .rowbtn, .rx-events .rowbtn, .fcmp-list .rowbtn {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; width: 100%; text-align: left;
+  padding: 6px 9px; border: 1px solid var(--hair, var(--line)); border-radius: 8px; background: rgba(18,27,44,.5);
+}
+.rx-actors .rowbtn span small { color: var(--dim); }
+.rx-actors .sw, .rx-units .sw { width: 12px; height: 10px; border-radius: 2px; display: inline-block; }
+.rx-n { color: var(--dim); white-space: nowrap; }
+.rx-units { max-height: 260px; overflow-y: auto; margin-top: 8px; }
+.rx-units .rowbtn small { color: var(--dim); white-space: nowrap; }
+.rx-events .rowbtn { grid-template-columns: auto 1fr; border-left: 3px solid var(--c); }
+.rx-events .rowbtn span { font-size: 13px; line-height: 1.35; }
+.rx-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rx-sites h4 { font: 600 11px var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 8px 0 6px; }
+.chip.on { border-color: var(--cyan); color: var(--cyan); }
+.srclinks { display: flex; flex-direction: column; gap: 6px; }
+.srclink { display: block; text-decoration: none; padding: 6px 9px; border: 1px solid var(--hair, var(--line)); border-radius: 8px; font-size: 13px; line-height: 1.35; }
+.srclink small { display: block; color: var(--dim); font-size: 11.5px; }
+.srclink:hover { border-color: rgba(0,217,255,.45); }
+
+/* front-line comparison */
+.fcmp-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fcmp-pick label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--dim); }
+.fcmp-pick label span { display: flex; align-items: center; gap: 6px; }
+.fcmp-pick .sw.line { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+.fcmp-pick select { width: 100%; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--hair, var(--line)); color: var(--text); }
+.fcmp-actions { display: flex; gap: 8px; margin: 10px 0 6px; align-items: center; }
+.fcmp-sum { margin: 4px 0 8px; font-size: 13.5px; }
+.fcmp-sum b { color: #FF8CC2; font-family: var(--mono); font-weight: 500; }
+.fcmp-list { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.fcmp-list .rowbtn { grid-template-columns: 1fr auto; border-left: 3px solid #FF5CA8; }
+.fcmp-list small { color: var(--dim); font-family: var(--mono); font-size: 11.5px; }
+.fl-cmp { margin-top: 7px; }
+.fl-rows a { color: var(--cyan); text-decoration: none; }
+.fl-rows a:hover { text-decoration: underline; }
+
+/* ── Mobile ───────────────────────────────────────────────────────────────
+   The stage keeps the whole width; the view switch and quick links sit on
+   one compact row; the provenance ticket and legend stay out of the globe. */
+@media (max-width: 880px) {
+  .viewswitch { top: 10px; left: 10px; }
+  .vs-row { gap: 6px; }
+  .vs-modes button { padding: 6px 9px; }
+  .vs-map { width: min(240px, 70vw); }
+  .ev { flex-basis: min(var(--evw, 220px), 78vw); }
+}
+.legend-mini-foot { display: flex; justify-content: space-between; align-items: center; }
+.legend-mini.folded { padding: 6px 10px; }
+.legend-mini.folded .legend-more { display: inline-flex; align-items: center; gap: 6px; }
+.legend-mini.folded .sw.dot { width: 8px; height: 8px; border-radius: 50%; }
+.legend-mini.folded .sw.box { width: 10px; height: 8px; border-radius: 2px; }
+.vs-map { position: relative; }
+.vs-close { position: absolute; top: 6px; right: 6px; padding: 1px 6px; }
+.vs-stylebtn { padding: 6px 10px; color: var(--dim); font: 600 11px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.vs-stylebtn:hover { color: var(--text); }

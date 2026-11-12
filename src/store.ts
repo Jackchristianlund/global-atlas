@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { bundledFrontline, loadFrontline as loadFrontlineData, type FrontlineSet } from './lib/frontline';
+import { bundledFrontline, frontlinePaths, loadFrontline as loadFrontlineData, type FrontlineSet } from './lib/frontline';
+import { diffFronts, type FrontDiff, type LatLng as DiffLatLng } from './lib/frontDiff';
 import { conflictBbox, zoomForBbox } from './lib/territory';
-import { cachedMonth, loadMonth, type HistoryMonth, type MonthState } from './lib/frontlineHistory';
+import { cachedMonth, loadMonth, monthDate, type HistoryMonth, type MonthState } from './lib/frontlineHistory';
 import type { ConflictType, Iso, Lang, LayerId, Selection, ViewId } from './types';
 import type { Tier } from './lib/entitlement';
 import type { MapStyleId } from './map/styles';
@@ -106,6 +107,19 @@ interface State {
   frontMonth: HistoryMonth | null;
   frontMonthState: MonthState;
   setFrontMonth: (m: HistoryMonth | null) => void;
+  /** Two dated assessments of the front, compared. Null when not comparing. */
+  frontCompare: { a: CompareKey; b: CompareKey } | null;
+  frontCompareState: CompareState;
+  setFrontCompare: (pair: { a: CompareKey; b: CompareKey } | null, opts?: { frame?: boolean }) => void;
+  /** The globe camera came from a shared link and should be applied as-is once the globe is ready. */
+  linkedView: boolean;
+  /**
+   * A request to frame an area, from anywhere in the interface: the map fits
+   * it, the globe flies to it. `n` changes on every request so asking for the
+   * same area twice still moves the camera back to it.
+   */
+  frame: { bbox: [number, number, number, number]; n: number } | null;
+  frameArea: (bbox: [number, number, number, number]) => void;
   loadFrontline: () => Promise<void>;
   openDetail: (isos: readonly string[], at: [number, number], region?: string) => void;
   /** What the on-demand incident file reported, for the layer's own status line. */
@@ -181,6 +195,43 @@ interface State {
   setLowPower: (o: boolean) => void;
 }
 
+/** One side of a front-line comparison: a month of the published series, or the current line. */
+export type CompareKey = HistoryMonth | 'now';
+
+export interface CompareLine { key: CompareKey; label: string; date: string; segments: DiffLatLng[][]; vertices: number }
+
+export type CompareState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready'; a: CompareLine; b: CompareLine; diff: FrontDiff }
+  | { status: 'unavailable'; reason: string };
+
+/**
+ * Shifts below this are not reported. The monthly series is generalised by
+ * the service to about 1.3 km, so two copies of the same line can sit up to
+ * roughly twice that apart without anything having moved.
+ */
+export const COMPARE_THRESHOLD_KM = 3;
+
+/** The geometry for one side of a comparison. */
+async function lineFor(key: CompareKey, current: FrontlineSet): Promise<CompareLine | { reason: string }> {
+  if (key === 'now') {
+    const segs = frontlinePaths(current).map((p) => p.coords.map(([lng, lat]) => [lat, lng] as DiffLatLng));
+    return { key, label: 'now', date: current.meta.assessmentDate, segments: segs, vertices: segs.reduce((t, x) => t + x.length, 0) };
+  }
+  const st = cachedMonth(key) ? { status: 'ready' as const, line: cachedMonth(key)! } : await loadMonth(key);
+  if (st.status !== 'ready') return { reason: st.status === 'unavailable' ? st.reason : 'unavailable' };
+  return { key, label: st.line.label, date: monthDate(key), segments: st.line.segments as DiffLatLng[][], vertices: st.line.vertices };
+}
+
+/**
+ * Whether the right panel is showing detail rather than the overview. The
+ * panel widens for detail and stays compact otherwise, so the globe keeps the
+ * room until there is something to read.
+ */
+export const panelExpanded = (s: Pick<State, 'sel' | 'disputedId' | 'incidentBin' | 'trace'>): boolean =>
+  s.sel !== null || s.disputedId !== null || s.incidentBin !== null || s.trace.length > 0;
+
 const detectLowPower = () =>
   import.meta.env?.VITE_FORCE_FULL !== '1' &&
   typeof window !== 'undefined' &&
@@ -200,6 +251,10 @@ export const useStore = create<State>((set, get) => ({
   frontline: { set: bundledFrontline(), note: undefined, loading: false },
   frontMonth: null,
   frontMonthState: { status: 'idle' },
+  frontCompare: null,
+  frontCompareState: { status: 'idle' },
+  linkedView: false,
+  frame: null,
   tier: 'free',
   compareYear: null,
   tierOpen: remembered('ga.tierOpen', ['0', '1'] as const, '0') === '1',
@@ -285,10 +340,15 @@ export const useStore = create<State>((set, get) => ({
    */
   openDetail: (isos, at, region) => {
     const b = conflictBbox(isos, region);
-    const w = typeof window !== 'undefined' ? window.innerWidth - 700 : 900;
-    const h = typeof window !== 'undefined' ? window.innerHeight - 220 : 650;
+    // The room the map actually has: between the floating panels on a
+    // desktop, the whole width on a phone where the panels are drawers.
+    const W = typeof window !== 'undefined' ? window.innerWidth : 1600;
+    const H = typeof window !== 'undefined' ? window.innerHeight : 900;
+    const narrow = W <= 880;
+    const w = narrow ? W - 30 : W - 700;
+    const h = narrow ? H - 330 : H - 220;
     const view = b
-      ? { lng: (b[0] + b[2]) / 2, lat: (b[1] + b[3]) / 2, zoom: zoomForBbox(b, Math.max(w, 420), Math.max(h, 360)) }
+      ? { lng: (b[0] + b[2]) / 2, lat: (b[1] + b[3]) / 2, zoom: zoomForBbox(b, Math.max(w, narrow ? 240 : 420), Math.max(h, narrow ? 240 : 360)) }
       : { lng: at[1], lat: at[0], zoom: 6.5 };
     set({ mapMode: 'map', mapView: view });
   },
@@ -314,6 +374,24 @@ export const useStore = create<State>((set, get) => ({
       if (get().frontMonth === m) set({ frontMonthState: state });
     });
   },
+  setFrontCompare: (pair, opts) => {
+    if (!pair) { set({ frontCompare: null, frontCompareState: { status: 'idle' } }); return; }
+    set({ frontCompare: pair, frontCompareState: { status: 'loading' } });
+    const key = `${pair.a}|${pair.b}`;
+    void Promise.all([lineFor(pair.a, get().frontline.set), lineFor(pair.b, get().frontline.set)]).then(([la, lb]) => {
+      const now = get().frontCompare;
+      // Ignore an answer for a pair the reader has already moved off.
+      if (!now || `${now.a}|${now.b}` !== key) return;
+      if ('reason' in la || 'reason' in lb) {
+        set({ frontCompareState: { status: 'unavailable', reason: ('reason' in la ? la : lb as { reason: string }).reason } });
+        return;
+      }
+      const diff = diffFronts(la.segments, lb.segments, COMPARE_THRESHOLD_KM);
+      set({ frontCompareState: { status: 'ready', a: la, b: lb, diff } });
+      if (diff.bbox && opts?.frame !== false) get().frameArea(diff.bbox);
+    });
+  },
+  frameArea: (bbox) => set((s) => ({ frame: { bbox, n: (s.frame?.n ?? 0) + 1 } })),
   setCollapsed: (which, collapsed) => {
     remember(`ga.c.${which}`, collapsed ? '1' : '0');
     if (which === 'left') set({ leftCollapsed: collapsed });
