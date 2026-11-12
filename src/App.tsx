@@ -20,12 +20,25 @@ const RegionMap = lazy(() => import('./map/RegionMap'));
 
 export default function App() {
   const mapMode = useStore((s) => s.mapMode);
+  const leftCollapsed = useStore((s) => s.leftCollapsed);
+  const rightCollapsed = useStore((s) => s.rightCollapsed);
+  const setCollapsed = useStore((s) => s.setCollapsed);
   const lowPower = useStore((s) => s.lowPower);
   const { t } = useT();
   return (
     <div className={lowPower ? 'app lowpower' : 'app'}>
       <Header />
-      <div className="mid">
+      <div className={`mid${leftCollapsed ? ' lc' : ''}${rightCollapsed ? ' rc' : ''}`}>
+        {leftCollapsed && (
+          <button type="button" className="edge-tab left" onClick={() => setCollapsed('left', false)} aria-label={t('showFilters')} title={t('showFilters')}>
+            <span aria-hidden="true">›</span>{t('filters')}
+          </button>
+        )}
+        {rightCollapsed && (
+          <button type="button" className="edge-tab right" onClick={() => setCollapsed('right', false)} aria-label={t('showPanel')} title={t('showPanel')}>
+            {t('panel')}<span aria-hidden="true">‹</span>
+          </button>
+        )}
         <LeftSidebar />
         <main className="stage">
           {/* The globe stays mounted while the map is open: its textures and

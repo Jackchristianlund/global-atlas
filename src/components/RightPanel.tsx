@@ -430,7 +430,7 @@ function IncidentPanel() {
 
 export default function RightPanel() {
   const { t } = useT();
-  const { sel, view, select, disputedId, showDisputed, incidentBin, showIncidentBin, rightOpen, setRightOpen } = useStore();
+  const { sel, view, select, disputedId, showDisputed, incidentBin, showIncidentBin, rightOpen, setRightOpen, setCollapsed } = useStore();
   const hasSel = sel !== null || disputedId !== null || incidentBin !== null;
   let body;
   if (incidentBin) body = <IncidentPanel />;
@@ -454,6 +454,7 @@ export default function RightPanel() {
     <aside className={`panel right${rightOpen ? ' open' : ''}`} aria-label={t('panel')}>
       <div className="panel-bar">
         {hasSel ? <button type="button" className="mini" onClick={() => { showDisputed(null); showIncidentBin(null); select(null); }}>← {t('overview')}</button> : <span className="panel-title">{view === 'scenario' ? t('v_scenario') : t('overview')}</span>}
+        <button type="button" className="mini only-desktop fold" onClick={() => setCollapsed('right', true)} aria-label={t('hidePanel')} title={t('hidePanel')}>›</button>
         <button type="button" className="mini only-mobile" onClick={() => setRightOpen(false)} aria-label={t('close')}>✕</button>
       </div>
       <div className="panel-scroll" key={`${sel?.kind}:${sel?.id}:${disputedId}:${incidentBin?.at.join()}:${view}`}><TraceSection />{body}<Ad slot="right" /></div>

@@ -7,7 +7,7 @@ import { fmtDate, useT } from '../i18n';
 
 export default function Timeline() {
   const { t, tl, lang } = useT();
-  const { year, setYear, playing, setPlaying, view, select } = useStore();
+  const { year, setYear, playing, setPlaying, view, select, eventsCollapsed, setCollapsed } = useStore();
   const events = useMemo(() => eventsInYear(EVENTS, year), [year]);
   const n = useMemo(() => conflictsAt(CONFLICTS, year).length, [year]);
   const terr = useMemo(() => regionsWithData(year).length, [year]);
@@ -37,9 +37,16 @@ export default function Timeline() {
         <datalist id="tl-ticks">{Array.from({ length: SNAPSHOT_YEAR - FIRST_YEAR + 1 }, (_, i) => <option key={i} value={FIRST_YEAR + i} />)}</datalist>
         {year !== SNAPSHOT_YEAR && <button type="button" className="mini" onClick={() => { setPlaying(false); setYear(SNAPSHOT_YEAR); }}>{t('today')}</button>}
         <span className="tl-count meta">{t('conflictsIn')} {year}: {n} · {t('terr')}: {terr} · {t('evInView')}: {events.length}</span>
+        {/* The event strip is a third of the timeline's height. Folded, the
+            year control stays and the map gets the rows back. */}
+        <button
+          type="button" className="mini fold" aria-expanded={!eventsCollapsed}
+          onClick={() => setCollapsed('events', !eventsCollapsed)}
+          aria-label={eventsCollapsed ? t('showEvents') : t('hideEvents')} title={eventsCollapsed ? t('showEvents') : t('hideEvents')}
+        >{eventsCollapsed ? '▴' : '▾'}</button>
       </div>
       {year < SNAPSHOT_YEAR && <p className="note tl-note">{t('bordersToday')}</p>}
-      <div className="tl-events" role="list" aria-label={`${t('eventsIn')} ${year}`}>
+      {!eventsCollapsed && <div className="tl-events" role="list" aria-label={`${t('eventsIn')} ${year}`}>
         {events.length === 0 && <span className="meta">{t('noEvents')}</span>}
         {events.map((e, i) => (
           <button
@@ -52,7 +59,7 @@ export default function Timeline() {
             <span>{tl(e.t)}</span>
           </button>
         ))}
-      </div>
+      </div>}
     </footer>
   );
 }

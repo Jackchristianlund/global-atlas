@@ -38,6 +38,7 @@ export default function LeftSidebar() {
     <aside className={`panel left${s.leftOpen ? ' open' : ''}`} aria-label={t('filters')}>
       <div className="panel-bar">
         <span className="panel-title">{t('filters')}</span>
+        <button type="button" className="mini only-desktop fold" onClick={() => s.setCollapsed('left', true)} aria-label={t('hidePanel')} title={t('hidePanel')}>‹</button>
         <button type="button" className="mini only-mobile" onClick={() => s.setLeftOpen(false)} aria-label={t('close')}>✕</button>
       </div>
       <div className="panel-scroll">

@@ -139,6 +139,11 @@ interface State {
   modal: ModalId;
   leftOpen: boolean;
   rightOpen: boolean;
+  /** Desktop: a panel folded away to give the map the room. Remembered. */
+  leftCollapsed: boolean;
+  rightCollapsed: boolean;
+  eventsCollapsed: boolean;
+  setCollapsed: (which: 'left' | 'right' | 'events', collapsed: boolean) => void;
   lowPower: boolean;
   setLang: (l: Lang) => void;
   setView: (v: ViewId) => void;
@@ -217,6 +222,9 @@ export const useStore = create<State>((set, get) => ({
   modal: null,
   leftOpen: false,
   rightOpen: false,
+  leftCollapsed: remembered('ga.c.left', ['0', '1'] as const, '0') === '1',
+  rightCollapsed: remembered('ga.c.right', ['0', '1'] as const, '0') === '1',
+  eventsCollapsed: remembered('ga.c.events', ['0', '1'] as const, '0') === '1',
   lowPower: detectLowPower(),
   setLang: (lang) => {
     document.documentElement.lang = lang === 'no' ? 'nb' : 'en';
@@ -243,7 +251,7 @@ export const useStore = create<State>((set, get) => ({
     saveLayers(s.layers, layerOpacity);
     return { layerOpacity };
   }),
-  pushTrace: (linkId) => set((s) => ({ trace: s.trace.includes(linkId) ? s.trace : [...s.trace, linkId], rightOpen: true })),
+  pushTrace: (linkId) => set((s) => ({ trace: s.trace.includes(linkId) ? s.trace : [...s.trace, linkId], rightOpen: true, rightCollapsed: false })),
   popTrace: () => set((s) => ({ trace: s.trace.slice(0, -1) })),
   clearTrace: () => set({ trace: [] }),
   setLegendOpen: (legendOpen) => set({ legendOpen }),
@@ -251,10 +259,18 @@ export const useStore = create<State>((set, get) => ({
     const s = get();
     // In compare mode a country click fills the second slot instead of replacing the first.
     if (s.picking && sel?.kind === 'country' && s.sel?.kind === 'country' && sel.id !== s.sel.id) {
-      set({ compare: sel.id, picking: false, rightOpen: true });
+      set({ compare: sel.id, picking: false, rightOpen: true, rightCollapsed: false });
       return;
     }
-    set({ sel, disputedId: null, incidentBin: null, compare: null, picking: false, trace: [], rightOpen: sel !== null || s.rightOpen, leftOpen: false });
+    // Selecting something brings its panel back if it was folded away: a click
+    // on a conflict that appears to do nothing is the worst outcome a fold
+    // could have. The stored preference is left alone, so the fold is back on
+    // the next visit.
+    set({
+      sel, disputedId: null, incidentBin: null, compare: null, picking: false, trace: [],
+      rightOpen: sel !== null || s.rightOpen, leftOpen: false,
+      ...(sel !== null && s.rightCollapsed ? { rightCollapsed: false } : {}),
+    });
   },
   loadFrontline: async () => {
     if (get().frontline.loading || get().frontline.set.tier === 'live') return;
@@ -297,6 +313,12 @@ export const useStore = create<State>((set, get) => ({
       // Ignore an answer for a month the reader has already moved off.
       if (get().frontMonth === m) set({ frontMonthState: state });
     });
+  },
+  setCollapsed: (which, collapsed) => {
+    remember(`ga.c.${which}`, collapsed ? '1' : '0');
+    if (which === 'left') set({ leftCollapsed: collapsed });
+    else if (which === 'right') set({ rightCollapsed: collapsed });
+    else set({ eventsCollapsed: collapsed });
   },
   showDisputed: (disputedId) => set({ disputedId, incidentBin: null, rightOpen: disputedId !== null || get().rightOpen }),
   showIncidentBin: (incidentBin) => set({ incidentBin, sel: null, disputedId: null, rightOpen: incidentBin !== null || get().rightOpen, leftOpen: false }),
