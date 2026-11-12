@@ -45,11 +45,40 @@ function LinkCard({ l }: { l: ImpactLink }) {
   );
 }
 
+/**
+ * What a conflict reaches beyond its own ground, grouped by how well it is
+ * known.
+ *
+ * The three kinds are the whole point. Something observed, something assessed
+ * and something merely possible are different claims about the world, and a
+ * reader who cannot tell them apart at a glance will read the third as the
+ * first. A small badge on each card was not enough: they now sit under their
+ * own headings, in that order, with what each heading means said once.
+ */
+const KIND_ORDER = ['observed', 'assessed', 'potential'] as const;
+
 function Links({ items }: { items: ImpactLink[] }) {
   const { t } = useT();
   if (!items.length) return <Empty>{t('noLinks')}</Empty>;
-  const order = { observed: 0, assessed: 1, potential: 2 } as const;
-  return <ul className="links">{items.slice().sort((a, b) => order[a.kind] - order[b.kind]).map((l) => <LinkCard key={l.id} l={l} />)}</ul>;
+  return (
+    <>
+      <p className="eff-key">{t('eff_key')}</p>
+      {KIND_ORDER.map((kind) => {
+        const of = items.filter((l) => l.kind === kind);
+        if (!of.length) return null;
+        return (
+          <div className={`effgroup o-${kind}`} key={kind}>
+            <h5>
+              <span className={`badge o-${kind}`}>{t(`o_${kind}`)}</span>
+              <span className="eff-what">{t(`eff_${kind}`)}</span>
+              <span className="eff-n">{of.length}</span>
+            </h5>
+            <ul className="links">{of.map((l) => <LinkCard key={l.id} l={l} />)}</ul>
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 function ConflictPanel({ id }: { id: string }) {
@@ -140,7 +169,7 @@ function ConflictPanel({ id }: { id: string }) {
           </Section>
         );
       })}
-      <Section title={t('connections')}><Links items={links} /></Section>
+      <Section title={t('effects')}><Links items={links} /></Section>
       {events.length > 0 && (
         <Section title={t('relatedEvents')}>
           <ul className="evlist">{events.map((e, i) => <li key={i}><time dateTime={e.d}>{fmtDate(e.d, lang)}</time> {tl(e.t)} <Src ids={e.s} /></li>)}</ul>
@@ -284,7 +313,7 @@ function ChokepointPanel({ id }: { id: string }) {
       <Section title={`${t('routesVia')} ${tl(cp.name)}`}>
         {via.length ? via.map((r) => <button key={r.id} type="button" className="rowbtn" onClick={() => select({ kind: 'route', id: r.id })}>{tl(r.name)}</button>) : <Empty>{t('none')}</Empty>}
       </Section>
-      <Section title={t('connections')}><Links items={links} /></Section>
+      <Section title={t('effects')}><Links items={links} /></Section>
       <Section title={t('sources')}><SourceList ids={cp.s} /></Section>
     </article>
   );

@@ -899,3 +899,20 @@ ul.cmplist li { display: flex; flex-direction: column; gap: 2px; border-left: 2p
   letter-spacing: .04em; color: var(--dim2, #63748C);
 }
 .laygroup > h4 span.on { color: var(--acc); }
+
+/* ── Effects, grouped by how well they are known ─────────────────────────
+   Observed, assessed and possible are different claims about the world. A
+   badge on each card left them interleaved; under headings, the structure is
+   the first thing read. */
+.eff-key { margin: 0 0 10px; font-size: 11px; line-height: 1.45; color: var(--dim); }
+.effgroup { margin-bottom: 14px; }
+.effgroup:last-child { margin-bottom: 0; }
+.effgroup > h5 {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 7px;
+  padding-bottom: 5px; border-bottom: 1px solid var(--line);
+  font-size: 11px; font-weight: 500;
+}
+.eff-what { color: var(--dim); font-size: 10.5px; }
+.eff-n { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--dim2, #63748C); }
+/* The possible ones read quieter than the measured ones, by design. */
+.effgroup.o-potential .links { opacity: .82; }
