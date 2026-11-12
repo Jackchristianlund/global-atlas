@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ATTACKS } from '../data/attacks';
 import { EVENTS, EVENT_COLOR } from '../data';
 import { ACTOR, ACTORS, PLACES } from '../data/territory';
@@ -123,6 +123,25 @@ function FrontCompare() {
   );
 }
 
+/** What the labelled control layer is, where it came from, and how old it is. */
+function ControlStatus() {
+  const { t, lang } = useT();
+  const control = useStore((s) => s.control);
+  const load = useStore((s) => s.loadControl);
+  useEffect(() => { void load(); }, [load]);
+  if (control.status === 'loading' || control.status === 'idle') return <small>{t('fl_h_loading')}</small>;
+  if (control.status === 'unavailable') return <small className="fl-warn">{t('ctl_off')} ({control.reason})</small>;
+  const L = control.layer;
+  const src = L.source === 'isw' ? SOURCES.iswControl : SOURCES.ochaHnrpOt;
+  return (
+    <small>
+      {L.source === 'isw' ? 'ISW / CTP' : 'UN OCHA, HNRP 2026'} · {L.current ? t('ctl_fetched') : t('ctl_lineOf')}{' '}
+      <a href={src?.url} target="_blank" rel="noopener noreferrer">{fmtDate(L.asOf, lang)}</a> · ≈{fmtNum(L.areaKm2, lang)} km²
+      {!L.current && <> {t('ctl_older')}</>}
+    </small>
+  );
+}
+
 export function UkraineExplorer() {
   const { t, lang } = useT();
   const meta = useStore((s) => s.frontline.set.meta);
@@ -141,8 +160,8 @@ export function UkraineExplorer() {
               <small>{t('fl_unlabelled')}. {t('rx_notLive')}</small>
             </div>
           </li>
-          <li><i className="sw box" style={{ background: 'rgba(77,140,255,.6)' }} /><div><b>{t('lg_terrGov')}</b><small>{t('rx_ctlSummary')}</small></div></li>
-          <li><i className="sw box" style={{ background: 'rgba(214,69,61,.6)' }} /><div><b>{t('lg_terrOcc')}</b><small>{t('rx_ctlShare')}</small></div></li>
+          <li><i className="sw box" style={{ background: 'rgba(214,69,61,.75)', outline: '1px solid #9E2A24' }} /><div><b>{t('ctl_title')}</b><ControlStatus /></div></li>
+          <li><i className="sw box" style={{ background: 'rgba(214,69,61,.3)' }} /><div><b>{t('lg_terrOcc')} ({t('ctl_oblast')})</b><small>{t('rx_ctlShare')}</small></div></li>
           <li><i className="sw line dashed" style={{ borderTopColor: '#FFFFFF' }} /><div><b>{t('rx_partial')}</b><small>{t('rx_partialNote')}</small></div></li>
           <li><i className="sw line dashed" style={{ borderTopColor: '#FFC24D' }} /><div><b>{t('rx_older')}</b></div></li>
           <li><i className="sw line" style={{ background: '#5CE1FF' }} /><div><b>{t('rx_newer')}</b></div></li>

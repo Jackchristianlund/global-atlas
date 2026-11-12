@@ -646,6 +646,12 @@ export const S = {
   sr_city: ['By', 'City'],
   sh_copy: ['Del visning', 'Share view'],
   sh_copied: ['Lenke kopiert', 'Link copied'],
+  ctl_title: ['Okkupert område (kildemerket)', 'Occupied area (labelled by source)'],
+  ctl_oblast: ['oppsummering per oblast', 'summary per oblast'],
+  ctl_lineOf: ['tegnet mot frontlinjen per', 'drawn against the front line of'],
+  ctl_fetched: ['hentet', 'fetched'],
+  ctl_older: ['Eldre enn frontlinjen på kartet: stripen mellom dem er endring siden da, som kilden ikke merker, og den er derfor ikke farget.', 'Older than the front line on the map: the strip between them is change since then, which the source does not label, so it is left uncoloured.'],
+  ctl_off: ['Kontrollområdene kunne ikke hentes akkurat nå. Ingenting er tegnet i stedet.', 'The areas of control could not be fetched just now. Nothing has been drawn in their place.'],
   sh_hint: ['Kopierer en lenke som åpner samme region, dato, zoom og kartlag.', 'Copies a link that opens the same region, date, zoom and layers.'],
 } satisfies Record<string, L>;
 

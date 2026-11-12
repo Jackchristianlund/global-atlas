@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { bundledFrontline, frontlinePaths, loadFrontline as loadFrontlineData, type FrontlineSet } from './lib/frontline';
 import { diffFronts, type FrontDiff, type LatLng as DiffLatLng } from './lib/frontDiff';
+import { loadControl as loadControlData, type ControlState } from './lib/control';
 import { conflictBbox, zoomForBbox } from './lib/territory';
 import { cachedMonth, loadMonth, monthDate, type HistoryMonth, type MonthState } from './lib/frontlineHistory';
 import type { ConflictType, Iso, Lang, LayerId, Selection, ViewId } from './types';
@@ -113,6 +114,9 @@ interface State {
   setFrontCompare: (pair: { a: CompareKey; b: CompareKey } | null, opts?: { frame?: boolean }) => void;
   /** The globe camera came from a shared link and should be applied as-is once the globe is ready. */
   linkedView: boolean;
+  /** Labelled areas of control in Ukraine (lib/control.ts). */
+  control: ControlState;
+  loadControl: () => Promise<void>;
   /**
    * A request to frame an area, from anywhere in the interface: the map fits
    * it, the globe flies to it. `n` changes on every request so asking for the
@@ -254,6 +258,13 @@ export const useStore = create<State>((set, get) => ({
   frontCompare: null,
   frontCompareState: { status: 'idle' },
   linkedView: false,
+  control: { status: 'idle' },
+  loadControl: async () => {
+    const st = get().control.status;
+    if (st === 'loading' || st === 'ready') return;
+    set({ control: { status: 'loading' } });
+    set({ control: await loadControlData() });
+  },
   frame: null,
   tier: 'free',
   compareYear: null,

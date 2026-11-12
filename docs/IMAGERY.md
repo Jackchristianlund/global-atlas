@@ -19,6 +19,30 @@ capture years (2016–2017, **before the 2022 invasion**), 10 m resolution, and
 that it is non-commercial. A satellite view on a war map is read as current
 unless it says otherwise.
 
+## High-resolution imagery with no subscription: Esri, free tier
+
+ArcGIS Location Platform comes with a commercial deployment licence and a
+monthly free tier that includes 2,000,000 basemap tiles. New accounts start
+with pay-as-you-go **disabled**, so usage beyond the free tier stops the
+service rather than producing a bill. That makes it the one option that is
+both licensed for commercial use and free at this atlas's traffic.
+
+It needs an account in your name, which only you can create:
+
+1. Create an ArcGIS Location Platform account at location.arcgis.com and leave
+   pay-as-you-go off.
+2. Create an API key (developer credentials) with the **basemap** privilege
+   only. Restrict it to the referrer `https://jackchristianlund.github.io/*`:
+   the key ships in the page, as every browser map key does, and the referrer
+   restriction is what stops others from using it.
+3. In the GitHub repository: Settings → Secrets and variables → Actions.
+   Add the **secret** `VITE_SATELLITE_KEY` with the key, and the **variable**
+   `VITE_SATELLITE_PROVIDER` with the value `esri`.
+4. Re-run the "Deploy to Pages" workflow (or push anything). Satellite and
+   Hybrid then use Esri World Imagery, sub-metre in most populated areas, with
+   "Powered by Esri" and its data providers credited on the map, and the
+   non-commercial notice disappears.
+
 ## Switching to a commercial imagery provider
 
 Set two build-time variables (see `.env.example`):

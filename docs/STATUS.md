@@ -221,6 +221,21 @@ source). The monthly front lines are fetched live, not bundled (see
 `src/data/frontline/history/README.md`). Live deployment and real-browser
 verification of this build need the changes pushed to `main`.
 
+## Labelled areas of control in Ukraine (13 November 2026)
+
+The map now draws occupied territory from a source that labels the sides:
+UN OCHA's HNRP 2026 planning units marked "OT", drawn against the front line
+of 2 July 2025 (four units, about 87,800 km²). They are fetched live and
+validated (projection, extent, plausible area), shown in red with their date,
+and the Ukrainian oblast tint drops to a trace wherever they are drawn. The
+strip between the July 2025 area and today's line is left uncoloured and the
+legend says why. ISW/CTP's current "assessed Russian-controlled territory"
+layer is wired up behind `VITE_ISW_CONTROL_URL` and stays off until ISW grants
+permission; `docs/CONTROL.md` has the request. The deploy workflow now passes
+the imagery provider and key from the repository settings, so high-resolution
+Esri imagery (free tier, commercial licence) switches on by adding a key —
+see `docs/IMAGERY.md`.
+
 ## Data sources and licensing
 
 | Source | Use | Licence / access | Status |

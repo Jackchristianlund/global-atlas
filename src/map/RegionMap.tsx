@@ -40,8 +40,12 @@ import { panelExpanded } from '../store';
  * gone by the time single settlements are. The numbers are opacity, not data —
  * the polygons and their shares never change with zoom.
  */
-function fillOpacity(scale: number): maplibregl.ExpressionSpecification {
-  return ['interpolate', ['linear'], ['zoom'], 4, 0.45 * scale, 7, 0.3 * scale, 9, 0.12 * scale, 11, 0.06 * scale];
+function fillOpacity(scale: number, quietUkraine = false): maplibregl.ExpressionSpecification {
+  // Where labelled control polygons are drawn, Ukraine's oblast tint drops to
+  // a trace: still there to click, no longer painting the same claim twice.
+  const v = (o: number): maplibregl.ExpressionSpecification | number =>
+    quietUkraine ? ['case', ['==', ['get', 'region'], 'ukraine'], 0.03, o * scale] : o * scale;
+  return ['interpolate', ['linear'], ['zoom'], 4, v(0.45), 7, v(0.3), 9, v(0.12), 11, v(0.06)] as maplibregl.ExpressionSpecification;
 }
 
 /** The map's current extent as [west, south, east, north]. */
@@ -74,6 +78,12 @@ function unwrap(pts: [number, number][]): [number, number][] {
 const ROUTE_DATA = routesFC(ALL_ROUTES.map((r) => ({ id: r.id, kind: r.kind, pts: unwrap(routePoints(r)), computed: isComputed(r.id) })));
 const DISTRICTS = districtFC(districts as unknown as { lines: number[][][]; labels: { n: string; at: number[] }[] });
 
+/** The labelled control polygons, or nothing while they are loading or unavailable. */
+function controlFC(): { type: 'FeatureCollection'; features: unknown[] } {
+  const c = useStore.getState().control;
+  return { type: 'FeatureCollection', features: c.status === 'ready' ? c.layer.features : [] };
+}
+
 /** What the map is drawn on: the bundled base, a vector style, or imagery. */
 type BaseKind = 'bundled' | 'vector' | 'imagery';
 
@@ -90,6 +100,9 @@ export default function RegionMap() {
   const cmpState = useStore((st) => st.frontCompareState);
   const monthState = useStore((st) => st.frontMonthState);
   const frame = useStore((st) => st.frame);
+  const control = useStore((st) => st.control);
+  const loadControl = useStore((st) => st.loadControl);
+  useEffect(() => { void loadControl(); }, [loadControl]);
   const bound = useRef(false);
   const { t, lang } = useT();
   const s = useStore();
@@ -190,6 +203,7 @@ export default function RegionMap() {
     const c = st.frontCompareState.status === 'ready' ? st.frontCompareState : null;
     (m.getSource('cmp') as maplibregl.GeoJSONSource | undefined)?.setData(compareFC(c?.a.segments ?? null, c?.b.segments ?? null) as never);
     (m.getSource('diff') as maplibregl.GeoJSONSource | undefined)?.setData(diffFC(c?.diff.stretches ?? []) as never);
+    (m.getSource('ctl') as maplibregl.GeoJSONSource | undefined)?.setData(controlFC() as never);
     const ms = st.frontMonthState;
     (m.getSource('month') as maplibregl.GeoJSONSource | undefined)?.setData(monthFC(ms.status === 'ready' ? ms.line.segments : null) as never);
   }
@@ -208,6 +222,7 @@ export default function RegionMap() {
     src('belligerent', belligerentFC(viewBounds(m), world.current, conflictRef.current));
     src('terr', territoryFC(year));
     src('contact', contactFC(year, undefined, hideContact));
+    src('ctl', controlFC());
     src('routes', ROUTE_DATA);
     src('choke', chokepointFC(CHOKEPOINTS.map((c) => ({ id: c.id, name: c.name[lang === 'no' ? 0 : 1], at: c.at }))));
     src('yem-dist', DISTRICTS.lines);
@@ -250,6 +265,17 @@ export default function RegionMap() {
       id: 'terr-sel', type: 'line', source: 'terr', filter: ['==', ['get', 'region'], selRegionRef.current ?? '__none'],
       layout: { 'line-join': 'round' },
       paint: { 'line-color': '#7FE3FF', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1.4, 9, 2.6], 'line-opacity': 0.9, 'line-blur': 0.4 },
+    });
+    // Labelled areas of control. Unlike the oblast tint these resolve the
+    // ground below the oblast, so they stay readable as the reader zooms in.
+    add({
+      id: 'ctl-fill', type: 'fill', source: 'ctl',
+      paint: { 'fill-color': '#D6453D', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.42, 8, 0.34, 12, 0.24] },
+    });
+    add({
+      id: 'ctl-line', type: 'line', source: 'ctl',
+      layout: { 'line-join': 'round' },
+      paint: { 'line-color': '#9E2A24', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.8, 10, 2], 'line-opacity': 0.9 },
     });
     // Yemen's districts: thin and dashed, administrative reference only. They
     // are never filled and never coloured by actor, because no sourced
@@ -409,6 +435,11 @@ export default function RegionMap() {
     if (m.getLayer('place-label')) vis('place-label', layers.fronts);
     vis('conflict-pt', layers.conflicts);
     vis('terr-sel', layers.territories);
+    vis('ctl-fill', layers.territories);
+    vis('ctl-line', layers.territories);
+    // Where labelled polygons are on the map, the oblast-level tint for
+    // Ukraine would only paint the same claim twice, more coarsely.
+    const ctlReady = useStore.getState().control.status === 'ready';
     vis('yem-dist', layers.borders);
     if (m.getLayer('yem-dist-label')) vis('yem-dist-label', layers.borders);
     vis('yem-site', layers.fronts);
@@ -430,7 +461,8 @@ export default function RegionMap() {
     if (k === 'imagery' && mapStyle === 'satellite') {
       for (const id of ['ne-places-dot', 'ne-places-label', 'ne-towns-label']) if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', 'visible');
     }
-    m.setPaintProperty('terr-fill', 'fill-opacity', fillOpacity(layerOpacity.territories));
+    m.setPaintProperty('terr-fill', 'fill-opacity', fillOpacity(layerOpacity.territories, ctlReady));
+    m.setPaintProperty('ctl-fill', 'fill-opacity', ['interpolate', ['linear'], ['zoom'], 4, 0.42 * layerOpacity.territories, 8, 0.34 * layerOpacity.territories, 12, 0.24 * layerOpacity.territories]);
     m.setPaintProperty('terr-line', 'line-opacity', 0.9 * layerOpacity.territories);
     m.setPaintProperty('contact-line', 'line-opacity', 0.95 * layerOpacity.fronts);
     m.setPaintProperty('frontline-case', 'line-opacity', 0.9 * layerOpacity.sourceline);
@@ -469,7 +501,7 @@ export default function RegionMap() {
     const retry = () => pushHistory(m);
     m.once('idle', retry);
     return () => { m.off('idle', retry); };
-  }, [cmpState, monthState]);
+  }, [cmpState, monthState, control]);
 
   // Frame an area someone asked for, leaving room for the floating panels.
   useEffect(() => {

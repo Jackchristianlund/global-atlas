@@ -38,6 +38,14 @@ jobs:
       - run: npm run typecheck
       - run: npx vitest run
       - run: npm run build
+        # Optional, and empty unless set in the repository settings:
+        # Settings → Secrets and variables → Actions. With none of them the
+        # build is exactly as before. See docs/IMAGERY.md and docs/CONTROL.md.
+        env:
+          VITE_SATELLITE_PROVIDER: ${{ vars.VITE_SATELLITE_PROVIDER }}
+          VITE_SATELLITE_KEY: ${{ secrets.VITE_SATELLITE_KEY }}
+          VITE_SATELLITE_ATTRIBUTION: ${{ vars.VITE_SATELLITE_ATTRIBUTION }}
+          VITE_ISW_CONTROL_URL: ${{ vars.VITE_ISW_CONTROL_URL }}
       - uses: actions/configure-pages@v5
         # Turns Pages on for the repository if it is not already, so the
         # deployment does not need a visit to the settings page.
