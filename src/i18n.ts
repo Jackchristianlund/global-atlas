@@ -40,6 +40,12 @@ export const S = {
   rt_method: ['Beregnet korteste vei i Eurostats maritime nettverk (2025)', 'Shortest path over the Eurostat maritime network (2025)'],
   rt_nottraffic: ['Viser en mulig seilas, ikke m\u00e5lt trafikk', 'Shows a possible voyage, not measured traffic'],
   rt_detour: ['lengre', 'longer'],
+  fl_history: ['Frontlinje gjennom 2026', 'Front line through 2026'],
+  fl_now: ['N\u00e5', 'Now'],
+  fl_h_loading: ['Henter m\u00e5neden \u2026', 'Fetching the month \u2026'],
+  fl_h_points: ['punkter', 'points'],
+  fl_h_hint: ['Velg en m\u00e5ned for \u00e5 se hvor linja gikk da.', 'Pick a month to see where the line ran then.'],
+  fl_h_off: ['M\u00e5nedsserien krever nett og er ikke tilgjengelig her.', 'The monthly series needs the network and is not available here.'],
   effects: ['Hvordan det p\u00e5virker', 'What this affects'],
   eff_key: [
     'Gruppert etter hvor godt virkningen er kjent. Rekkef\u00f8lgen er ikke tilfeldig: det som er m\u00e5lt st\u00e5r f\u00f8rst.',

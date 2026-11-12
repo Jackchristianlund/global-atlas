@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { bundledFrontline, loadFrontline as loadFrontlineData, type FrontlineSet } from './lib/frontline';
 import { conflictBbox, zoomForBbox } from './lib/territory';
+import { cachedMonth, loadMonth, type HistoryMonth, type MonthState } from './lib/frontlineHistory';
 import type { ConflictType, Iso, Lang, LayerId, Selection, ViewId } from './types';
 import type { Tier } from './lib/entitlement';
 import type { MapStyleId } from './map/styles';
@@ -101,6 +102,10 @@ interface State {
   /** The incident bin the user clicked, summarised. Parallel to `sel`, like `disputedId`. */
   incidentBin: IncidentBin | null;
   frontline: { set: FrontlineSet; note?: string; loading: boolean };
+  /** Which month of the published series is on screen; null is the current line. */
+  frontMonth: HistoryMonth | null;
+  frontMonthState: MonthState;
+  setFrontMonth: (m: HistoryMonth | null) => void;
   loadFrontline: () => Promise<void>;
   openDetail: (isos: readonly string[], at: [number, number], region?: string) => void;
   /** What the on-demand incident file reported, for the layer's own status line. */
@@ -188,6 +193,8 @@ export const useStore = create<State>((set, get) => ({
   incidentBin: null,
   incidentState: { status: 'not_ingested', n: 0, busy: false },
   frontline: { set: bundledFrontline(), note: undefined, loading: false },
+  frontMonth: null,
+  frontMonthState: { status: 'idle' },
   tier: 'free',
   compareYear: null,
   tierOpen: remembered('ga.tierOpen', ['0', '1'] as const, '0') === '1',
@@ -268,6 +275,28 @@ export const useStore = create<State>((set, get) => ({
       ? { lng: (b[0] + b[2]) / 2, lat: (b[1] + b[3]) / 2, zoom: zoomForBbox(b, Math.max(w, 420), Math.max(h, 360)) }
       : { lng: at[1], lat: at[0], zoom: 6.5 };
     set({ mapMode: 'map', mapView: view });
+  },
+  /**
+   * Shows one month of the published series, or returns to the current line.
+   * The month is set immediately so the control responds, and the state
+   * follows: a month that cannot be fetched says so rather than leaving the
+   * previous month on screen under the new label.
+   */
+  setFrontMonth: (m) => {
+    if (m === null) {
+      set({ frontMonth: null, frontMonthState: { status: 'idle' } });
+      return;
+    }
+    const hit = cachedMonth(m);
+    if (hit) {
+      set({ frontMonth: m, frontMonthState: { status: 'ready', line: hit } });
+      return;
+    }
+    set({ frontMonth: m, frontMonthState: { status: 'loading' } });
+    void loadMonth(m).then((state) => {
+      // Ignore an answer for a month the reader has already moved off.
+      if (get().frontMonth === m) set({ frontMonthState: state });
+    });
   },
   showDisputed: (disputedId) => set({ disputedId, incidentBin: null, rightOpen: disputedId !== null || get().rightOpen }),
   showIncidentBin: (incidentBin) => set({ incidentBin, sel: null, disputedId: null, rightOpen: incidentBin !== null || get().rightOpen, leftOpen: false }),

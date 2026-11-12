@@ -127,6 +127,8 @@ export default function GlobeView() {
   const wrap = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
   const frontMesh = useRef<FrontMesh | null>(null);
+  const histMesh = useRef<FrontMesh | null>(null);
+  const histScene = useRef<unknown>(null);
   // The camera altitude, for line weights that hold their width on screen.
   const globeAlt = useStore((st) => st.globeView.altitude);
   const [world, setWorld] = useState<CountryFeature[] | null>(null);
@@ -222,7 +224,13 @@ export default function GlobeView() {
     // them instead of being buried inside them.
     {
       const st = useStore.getState();
-      frontMesh.current?.dispose();
+      // Take the old group out of the scene before disposing it. Disposing
+      // alone frees the GPU resources but leaves an empty Group behind on
+      // every resize, which the renderer then walks for nothing.
+      if (frontMesh.current) {
+        g.scene().remove(frontMesh.current.group);
+        frontMesh.current.dispose();
+      }
       frontMesh.current = buildFrontMesh(
         frontlinePaths(st.frontline.set).map((f) => ({ id: f.id, coords: f.coords })),
         {
@@ -234,6 +242,7 @@ export default function GlobeView() {
       );
       frontMesh.current.setResolution(size.w, size.h);
       g.scene().add(frontMesh.current.group);
+      histScene.current = g.scene();
     }
 
     // Entrance: start far out, then settle onto the opening view.
@@ -666,6 +675,39 @@ export default function GlobeView() {
   // ── Paths: sea lanes, land corridors, pipelines ──────────────────────────
   // Quantised so a continuous zoom does not rebuild every path on every frame.
   const altStep = Math.round(globeAlt * 6) / 6;
+
+  // The chosen month of the published series, drawn as its own line. It is
+  // amber where the current line is white, and it carries no casing of its
+  // own, so the reader can see both at once and tell which is which without
+  // consulting anything.
+  const frontMonthState = useStore((st) => st.frontMonthState);
+  useEffect(() => {
+    const g = globe.current;
+    const scene = histScene.current as { add: (o: object) => void; remove: (o: object) => void } | null;
+    if (!g || !scene) return;
+    if (histMesh.current) {
+      scene.remove(histMesh.current.group);
+      histMesh.current.dispose();
+      histMesh.current = null;
+    }
+    if (frontMonthState.status !== 'ready' || !layers.sourceline) return;
+    const mesh = buildFrontMesh(
+      frontMonthState.line.segments.map((seg, i) => ({
+        id: `h${i}`,
+        // buildFrontMesh takes [lon, lat]; the loader stores [lat, lng].
+        coords: seg.map(([lat, lng]) => [lng, lat]),
+      })),
+      {
+        globeRadius: g.getGlobeRadius(), altitude: 0.021,
+        width: 2.2, casing: 5.4,
+        color: '#FFC24D', casingColor: '#1A1206',
+        opacity: layerOpacity.sourceline,
+      },
+    );
+    mesh.setResolution(size.w, size.h);
+    scene.add(mesh.group);
+    histMesh.current = mesh;
+  }, [frontMonthState, layers.sourceline, layerOpacity.sourceline, size.w, size.h]);
 
   const paths: PathD[] = useMemo(() => {
     const out: PathD[] = [];

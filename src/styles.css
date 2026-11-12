@@ -916,3 +916,24 @@ ul.cmplist li { display: flex; flex-direction: column; gap: 2px; border-left: 2p
 .eff-n { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--dim2, #63748C); }
 /* The possible ones read quieter than the measured ones, by design. */
 .effgroup.o-potential .links { opacity: .82; }
+
+/* ── Scrubbing the published monthly series ──────────────────────────────
+   Eleven small targets rather than a slider: each month is a separate fetch,
+   and a slider invites dragging through ten of them to reach the eleventh. */
+.fl-scrub { margin-bottom: 9px; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
+.fl-scrub-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.fl-scrub-head > span { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
+.fl-scrub-head .mini { margin-left: auto; }
+.fl-months { display: flex; gap: 3px; }
+.fl-months button {
+  flex: 1; min-width: 0; padding: 4px 0;
+  background: rgba(255, 255, 255, .04); border: 1px solid var(--line); border-radius: 4px;
+  color: var(--dim); font-family: var(--mono); font-size: 10px; cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.fl-months button:hover { background: rgba(255, 194, 77, .14); color: #FFC24D; }
+.fl-months button.on {
+  background: rgba(255, 194, 77, .2); border-color: rgba(255, 194, 77, .6); color: #FFC24D;
+}
+.fl-months button:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.fl-scrub-note { margin: 6px 0 0; font-size: 10px; color: var(--dim); min-height: 13px; }
