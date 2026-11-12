@@ -15,7 +15,7 @@ import { STATUS_COLOR, displayStatus, eventsInYear, membersAt, yearOf } from '..
 import { traceLinks } from '../lib/trace';
 import { buildHydro, setHydroOpacity } from '../lib/hydro';
 import { buildFrontMesh, type FrontMesh } from '../lib/frontmesh';
-import { belligerentColors, changedUnits, contactLines, frontsOfRegion, lighten, placesOfRegion, regionsWithData, territoryById, territoryFeatures, unitFill, type TerritoryFeature } from '../lib/territory';
+import { REGION_FOR_CONFLICT, belligerentColors, changedUnits, contactLines, frontsOfRegion, lighten, placesOfRegion, regionsWithData, territoryById, territoryFeatures, unitFill, type TerritoryFeature } from '../lib/territory';
 import { ACTOR, REGION } from '../data/territory';
 import { visibleConflicts } from '../lib/visible';
 import { SNAPSHOT_YEAR, useStore } from '../store';
@@ -475,7 +475,11 @@ export default function GlobeView() {
     for (const c of visibleConflicts(CONFLICTS, { year, snapshotYear: SNAPSHOT_YEAR, layers, statusOn, typeFilter })) {
       const ds = displayStatus(c, year, SNAPSHOT_YEAR);
       const op = ds === 'flashpoint' ? layerOpacity.flashpoints : layerOpacity.conflicts;
-      out.push({ key: `conflict:${c.id}`, kind: 'conflict', lat: c.at[0], lng: c.at[1], color: STATUS_COLOR[ds], label: pick(c.name, lang), cls: `st-${ds}`, op, go: () => select({ kind: 'conflict', id: c.id }) });
+      // A conflict whose front line is actually drawn gets a ring rather than
+      // a disc. Its marker sits by definition on the ground the line crosses,
+      // and a solid dot buries the very thing it is pointing at.
+      const drawn = layers.sourceline && REGION_FOR_CONFLICT[c.id] === 'ukraine';
+      out.push({ key: `conflict:${c.id}`, kind: 'conflict', lat: c.at[0], lng: c.at[1], color: STATUS_COLOR[ds], label: pick(c.name, lang), cls: `st-${ds}${drawn ? ' mk-ring' : ''}`, op, go: () => select({ kind: 'conflict', id: c.id }) });
     }
     if (layers.chokepoints) for (const c of CHOKEPOINTS) out.push({ key: `chokepoint:${c.id}`, kind: 'chokepoint', lat: c.at[0], lng: c.at[1], color: '#00D9FF', label: pick(c.name, lang), cls: '', op: layerOpacity.chokepoints, go: () => select({ kind: 'chokepoint', id: c.id }) });
     if (layers.energy) for (const e of ENERGY_SITES) out.push({ key: `site:${e.id}`, kind: 'site', lat: e.at[0], lng: e.at[1], color: '#FF9B42', label: e.name, cls: `sk-${e.kind}`, op: layerOpacity.energy, go: () => select({ kind: 'site', id: e.id }) });
