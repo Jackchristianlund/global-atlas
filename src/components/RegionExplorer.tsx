@@ -135,9 +135,10 @@ function ControlStatus() {
   const src = L.source === 'isw' ? SOURCES.iswControl : SOURCES.ochaHnrpOt;
   return (
     <small>
-      {L.source === 'isw' ? 'ISW / CTP' : 'UN OCHA, HNRP 2026'} · {L.current ? t('ctl_fetched') : t('ctl_lineOf')}{' '}
+      {L.source === 'isw' ? 'ISW / CTP' : 'UN OCHA, HNRP 2026'} · {L.current ? t('ctl_published') : t('ctl_lineOf')}{' '}
       <a href={src?.url} target="_blank" rel="noopener noreferrer">{fmtDate(L.asOf, lang)}</a> · ≈{fmtNum(L.areaKm2, lang)} km²
       {!L.current && <> {t('ctl_older')}</>}
+      {L.source === 'isw' && <> {t('ctl_iswUse')}</>}
     </small>
   );
 }
@@ -147,6 +148,7 @@ export function UkraineExplorer() {
   const meta = useStore((s) => s.frontline.set.meta);
   const tier = useStore((s) => s.frontline.set.tier);
   const age = ageInDays(meta.assessmentDate, SNAPSHOT_DATE);
+  const iswShown = useStore((s) => s.control.status === 'ready' && s.control.layer.source === 'isw');
   return (
     <div className="rx">
       <Section title={t('rx_read')}>
@@ -161,6 +163,9 @@ export function UkraineExplorer() {
             </div>
           </li>
           <li><i className="sw box" style={{ background: 'rgba(214,69,61,.75)', outline: '1px solid #9E2A24' }} /><div><b>{t('ctl_title')}</b><ControlStatus /></div></li>
+          {iswShown && <li><i className="sw box" style={{ background: 'rgba(227,93,85,.3)', outline: '1px dashed #C9423A' }} /><div><b>{t('ctl_adv')}</b><small>{t('ctl_advNote')}</small></div></li>}
+          {iswShown && <li><i className="sw box" style={{ background: 'rgba(240,138,75,.25)', outline: '1px dotted #E0763A' }} /><div><b>{t('ctl_inf')}</b><small>{t('ctl_infNote')}</small></div></li>}
+          {iswShown && <li><i className="sw line dashed" style={{ borderTopColor: '#5E1712' }} /><div><b>{t('ctl_pre')}</b></div></li>}
           <li><i className="sw box" style={{ background: 'rgba(214,69,61,.3)' }} /><div><b>{t('lg_terrOcc')} ({t('ctl_oblast')})</b><small>{t('rx_ctlShare')}</small></div></li>
           <li><i className="sw line dashed" style={{ borderTopColor: '#FFFFFF' }} /><div><b>{t('rx_partial')}</b><small>{t('rx_partialNote')}</small></div></li>
           <li><i className="sw line dashed" style={{ borderTopColor: '#FFC24D' }} /><div><b>{t('rx_older')}</b></div></li>

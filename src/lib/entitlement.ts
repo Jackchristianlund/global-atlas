@@ -62,6 +62,19 @@ export const GATED = new Set(['compare', 'network', 'scenario']);
 export const isPro = (tier: Tier) => tier === 'pro';
 export const gated = (feature: string, tier: Tier) => GATED.has(feature) && !isPro(tier);
 
+/**
+ * Whether any ad network is integrated. The labelled slots exist but are
+ * empty; nothing is sold in them.
+ */
+export const ADS_LIVE = false;
+
+/**
+ * Whether the atlas earns money in any form. Data used under a
+ * non-commercial permission (ISW's assessed control, EOX's hosted imagery)
+ * must switch off the moment this becomes true.
+ */
+export const COMMERCIAL = BILLING_ENABLED || ADS_LIVE;
+
 /** Advertising is shown to the free tier only, and only in the labelled slots. */
 export const showAds = (tier: Tier) => !isPro(tier);
 

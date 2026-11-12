@@ -236,6 +236,13 @@ the imagery provider and key from the repository settings, so high-resolution
 Esri imagery (free tier, commercial licence) switches on by adding a key —
 see `docs/IMAGERY.md`.
 
+**Update, 13 November 2026, later:** ISW has granted permission for
+non-commercial use. The map now draws ISW/CTP's own assessed control of
+terrain (published 12 November 2026, ≈112,700 km²), with assessed advances and
+infiltration areas as separate, lighter uncertainty layers and the pre-2022
+occupation as an outline. The layer switches itself off if billing or ads go
+live; OCHA's labelled units remain the fallback. See `docs/CONTROL.md`.
+
 ## Data sources and licensing
 
 | Source | Use | Licence / access | Status |

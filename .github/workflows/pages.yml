@@ -45,7 +45,8 @@ jobs:
           VITE_SATELLITE_PROVIDER: ${{ vars.VITE_SATELLITE_PROVIDER }}
           VITE_SATELLITE_KEY: ${{ secrets.VITE_SATELLITE_KEY }}
           VITE_SATELLITE_ATTRIBUTION: ${{ vars.VITE_SATELLITE_ATTRIBUTION }}
-          VITE_ISW_CONTROL_URL: ${{ vars.VITE_ISW_CONTROL_URL }}
+          # Set to 'off' to stop using ISW's control layer.
+          VITE_ISW_CONTROL: ${{ vars.VITE_ISW_CONTROL }}
       - uses: actions/configure-pages@v5
         # Turns Pages on for the repository if it is not already, so the
         # deployment does not need a visit to the settings page.

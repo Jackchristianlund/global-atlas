@@ -9,7 +9,50 @@ from the reader's browser, validates it (projection, extent, and a plausible
 total area), and draws it as published. Nothing is bundled, interpolated or
 derived from the line.
 
-## What is switched on: UN OCHA, HNRP 2026 planning units
+## What is switched on: ISW/CTP assessed control (with permission)
+
+Source: ISW's public web map **"Assessed Control of Terrain in Ukraine"**
+(ArcGIS item `9f04944a2fe84edab9da31750c2b15eb`, owner
+`gbarros_understandingwar`), which carries the day's layers as embedded
+feature collections, each feature with a `pub_date`. On 13 November 2026 it
+was published 12 November 2026.
+
+The item's own licence text: *"This geodata is the exclusive intellectual
+property of the Institute for the Study of War (ISW). You may not use this
+geodata without the written consent of ISW."*
+
+**Permission:** ISW has consented to use in this atlas **for non-commercial
+purposes only** (reported by the site owner on 13 November 2026). Keep ISW's
+written reply on file; it is the consent the licence requires.
+
+How the permission is enforced in code (`src/lib/control.ts`):
+
+- The layer is used only while `COMMERCIAL` (`src/lib/entitlement.ts`) is
+  false — that is, while neither billing nor any ad network is live. Turning
+  either on switches the ISW layer off and the map falls back to OCHA.
+- `VITE_ISW_CONTROL=off` (repository variable) switches it off without a code
+  change, should ISW withdraw consent.
+- Credit on the map and in the legend: "ISW and AEI's Critical Threats
+  Project", with the publication date and "with permission, non-commercial".
+
+What is drawn, as ISW labels it:
+
+| ISW layer | Drawn as |
+|---|---|
+| Assessed Russian-Controlled Terrain | solid red: control (≈112,700 km² on 12 Nov 2026) |
+| Assessed Russian Advances | light red, dashed edge: inside the forward line, not controlled |
+| Assessed Russian Infiltration Areas | faint orange, dotted edge: presence, not control |
+| Russian-controlled Ukrainian Territory Before Feb 24, 2022 | dark dashed outline only (already inside the controlled area) |
+| Claimed Russian Territory | **not drawn**: a party's claim ISW could not verify |
+
+Polygons are simplified to about 80 m in the browser (ISW's layer has about
+40,000 vertices), validated (extent, projection, plausible area) and never
+altered otherwise.
+
+## Fallback: UN OCHA, HNRP 2026 planning units
+
+Used when the ISW layer is switched off, cannot be reached or fails
+validation.
 
 `gis.unocha.org/.../ukr_hnrp_2026_uoa_poly/FeatureServer/2`
 
@@ -31,46 +74,6 @@ OCHA; OCHA's HNRP content is published under CC BY 4.0 on
 humanitarianaction.info, but the GIS service itself states no licence.
 Commercial redistribution should be confirmed with OCHA Ukraine before
 monetisation, as for the front line.
-
-## What is ready but switched off: ISW/CTP assessed control
-
-ISW and AEI's Critical Threats Project publish "Assessed Russian-controlled
-Ukrainian Territory" as polygon layers on a public ArcGIS service — the same
-analysts as the front line, updated almost daily. This is the source that
-would give a current, DeepStateMap-like picture.
-
-No reuse licence is published for it. Media that republish ISW maps do so with
-ISW's permission. So the adapter exists and is off. It switches on, ahead of
-the OCHA layer, when the build is given the layer URL:
-
-```
-Settings → Secrets and variables → Actions → Variables
-VITE_ISW_CONTROL_URL = https://services5.arcgis.com/<org>/ArcGIS/rest/services/<service>/FeatureServer/<layer>
-```
-
-Set it only once ISW has agreed in writing, and use the stable layer URL ISW
-names in that agreement (their public layers are rotated by date).
-
-### A request you can send (press@understandingwar.org)
-
-> Subject: Permission to display ISW-CTP assessed control of terrain in a
-> non-commercial online atlas
->
-> I run Global Atlas (https://jackchristianlund.github.io/global-atlas/), a
-> free, non-commercial atlas of armed conflicts with every layer dated and
-> sourced. It already shows the ISW-CTP front line as republished by UN OCHA,
-> credited to ISW and AEI's Critical Threats Project.
->
-> I would like to display your "Assessed Russian-controlled Ukrainian
-> Territory" layer, fetched live from your ArcGIS service in the reader's
-> browser, unaltered, with the assessment date and the credit "Institute for
-> the Study of War and AEI's Critical Threats Project" on the map and a link
-> to understandingwar.org. Nothing would be resold or stored beyond the
-> browser's cache.
->
-> Could you confirm whether this is permitted, which layer URL you would like
-> us to use, and the attribution you require? If a commercial version is
-> launched later, I will ask again before it does.
 
 ## Not used
 

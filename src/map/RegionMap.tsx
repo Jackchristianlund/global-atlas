@@ -273,12 +273,35 @@ export default function RegionMap() {
     });
     // Labelled areas of control. Unlike the oblast tint these resolve the
     // ground below the oblast, so they stay readable as the reader zooms in.
+    // Uncertainty first, under control: ISW's infiltration areas (presence,
+    // not control) faint with a dotted edge, its assessed advances (inside
+    // the forward line, not controlled) lighter with a dashed edge.
     add({
-      id: 'ctl-fill', type: 'fill', source: 'ctl',
+      id: 'ctl-inf', type: 'fill', source: 'ctl', filter: ['==', ['get', 'kind'], 'infiltration'],
+      paint: { 'fill-color': '#F08A4B', 'fill-opacity': 0.16 },
+    });
+    add({
+      id: 'ctl-inf-line', type: 'line', source: 'ctl', filter: ['==', ['get', 'kind'], 'infiltration'],
+      paint: { 'line-color': '#E0763A', 'line-width': 1, 'line-dasharray': [1, 2], 'line-opacity': 0.8 },
+    });
+    add({
+      id: 'ctl-adv', type: 'fill', source: 'ctl', filter: ['==', ['get', 'kind'], 'advance'],
+      paint: { 'fill-color': '#E35D55', 'fill-opacity': 0.2 },
+    });
+    add({
+      id: 'ctl-adv-line', type: 'line', source: 'ctl', filter: ['==', ['get', 'kind'], 'advance'],
+      paint: { 'line-color': '#C9423A', 'line-width': 1.2, 'line-dasharray': [3, 2], 'line-opacity': 0.85 },
+    });
+    add({
+      id: 'ctl-pre', type: 'line', source: 'ctl', filter: ['==', ['get', 'kind'], 'pre2022'],
+      paint: { 'line-color': '#5E1712', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.8, 10, 1.6], 'line-dasharray': [2, 1.5], 'line-opacity': 0.75 },
+    });
+    add({
+      id: 'ctl-fill', type: 'fill', source: 'ctl', filter: ['==', ['get', 'kind'], 'control'],
       paint: { 'fill-color': '#D6453D', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.42, 8, 0.34, 12, 0.24] },
     });
     add({
-      id: 'ctl-line', type: 'line', source: 'ctl',
+      id: 'ctl-line', type: 'line', source: 'ctl', filter: ['==', ['get', 'kind'], 'control'],
       layout: { 'line-join': 'round' },
       paint: { 'line-color': '#9E2A24', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.8, 10, 2], 'line-opacity': 0.9 },
     });
@@ -444,8 +467,7 @@ export default function RegionMap() {
     if (m.getLayer('place-label')) vis('place-label', layers.fronts);
     vis('conflict-pt', layers.conflicts);
     vis('terr-sel', layers.territories);
-    vis('ctl-fill', layers.territories);
-    vis('ctl-line', layers.territories);
+    for (const id of ['ctl-fill', 'ctl-line', 'ctl-adv', 'ctl-adv-line', 'ctl-inf', 'ctl-inf-line', 'ctl-pre']) vis(id, layers.territories);
     // Where labelled polygons are on the map, the oblast-level tint for
     // Ukraine would only paint the same claim twice, more coarsely.
     const ctlReady = useStore.getState().control.status === 'ready';
@@ -628,6 +650,8 @@ export default function RegionMap() {
         {base !== 'bundled' && def.attribution ? `${mapStyle === 'satellite' ? ' \u00b7 ' : ''}${def.attribution}` : ''}
         {imagery ? ` \u00b7 ${imagery.attribution}` : ''}
         {base === 'vector' && (def.relief ?? 0) > 0 ? ` \u00b7 ${DEM.attribution}` : ''}
+        {control.status === 'ready' && control.layer.source === 'isw' ? ` \u00b7 ${t('ctl_iswCredit')}` : ''}
+        {control.status === 'ready' && control.layer.source === 'ocha-hnrp' ? ' \u00b7 UN OCHA (HNRP 2026)' : ''}
         {layers.borders && inYemen ? ` \u00b7 ${(districts as { meta: { attribution: string } }).meta.attribution}` : ''}
       </p>
     </div>
