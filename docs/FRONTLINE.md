@@ -304,3 +304,70 @@ so a reader can tell them apart without being told. The lanes also hold a
 constant width on screen at any altitude and sit on a dark casing, because at
 globe distance the old 0.26° stroke came to about one and a half pixels and
 simply vanished.
+
+
+---
+
+# Addendum, 12 November 2026 — the monthly series, and what the blockage was
+
+Three things were verified from a real browser on the deployed site, which is
+the one place this could ever be checked.
+
+**The live tier works.** The provenance ticket reads "Fetched live from the
+source", and the assessment it shows is **11 November 2026** — a week newer
+than the bundled copy. OCHA's service allows cross-origin reads, so a reader on
+an ordinary host gets the current line at about 110 m rather than the stored
+one at 1300 m.
+
+**The base map works.** The tile style loads with 111 layers. The five map
+styles were never broken; they were unreachable from inside an artifact.
+
+**The blockage was mine.** Every filtered query against the monthly series
+returned the same four January records, through four different parameter
+mechanisms and across fourteen hours, so it looked like the service. From a
+browser the same queries answer correctly: `month_number=7` returns ten
+features, all July, objectids 55–64. It was the fetching tool caching one
+response for that endpoint, not OCHA.
+
+That is worth writing down, because the conclusion recorded last night —
+"upstream of the fetching tool" — was wrong in a way that would have stopped
+anyone retrying.
+
+## The series, as published
+
+| month | features | vertices |
+|---|---|---|
+| January | 4 | 277 |
+| February | 7 | 301 |
+| March | 7 | 311 |
+| April | 8 | 321 |
+| May | 12 | 346 |
+| June | 9 | 311 |
+| July | 10 | 335 |
+| August | 10 | 327 |
+| September | 10 | 331 |
+| October | 10 | 369 |
+| November | 8 | 349 |
+
+Eleven requests, about 75 KB at the service's own generalization.
+
+## Fetched, not bundled
+
+Deliberately. The series keeps moving — the current assessment advanced from 4
+to 11 November during the work that built this — so a stored copy would have
+started ageing at once. 75 KB over a network is cheap; a stale archive is not.
+
+Where there is no network the layer says it is unavailable. It does not
+approximate, and it does not show one month while implying the others.
+
+A month whose answer carries a different month than the one asked for is
+refused outright. That check is what caught the original problem, and it is the
+one that matters: a filter that silently does not take puts January's line on
+screen under July's label, and nothing about the picture would look wrong.
+
+## What it shows
+
+At country scale the March and November lines nearly coincide. That is not a
+rendering fault — it is the finding. The front moved very little across 2026,
+and the places where the two lines separate, around Kupiansk and in the south,
+are where it moved at all.
