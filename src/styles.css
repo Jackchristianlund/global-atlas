@@ -793,22 +793,31 @@ ul.cmplist li { display: flex; flex-direction: column; gap: 2px; border-left: 2p
 .hdr .gfxbtn, .hdr .tierbtn { font-size: 10.5px; padding: 5px 8px; }
 
 /* ── Front line provenance ticket ─────────────────────────────────────────
-   Beside the legend, clear of both the filter sidebar and the right panel.
-   It never collapses to an icon: the date and the author of an assessed
-   front line are not optional detail. */
+   One line beside the legend, opening to the full provenance on click. The
+   date and the author never hide; the licence note and the tolerance are
+   detail, and detail does not belong on top of the map. */
 .fl-ticket {
-  position: absolute; left: 516px; bottom: 14px; z-index: 1500; width: 236px;
-  padding: 9px 11px; background: rgba(10,16,28,.9); backdrop-filter: blur(8px);
+  position: absolute; left: 516px; bottom: 14px; z-index: 1500; max-width: 300px;
+  background: rgba(10,16,28,.9); backdrop-filter: blur(8px);
   border: 1px solid var(--line); border-radius: 9px;
   font-size: 11px; line-height: 1.4; color: var(--dim);
   box-shadow: 0 6px 24px rgba(0,0,0,.4);
 }
-.fl-head { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
-.fl-head strong { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--txt); }
+.fl-head {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  padding: 7px 10px; background: none; border: 0; cursor: pointer;
+  color: inherit; font: inherit; text-align: left;
+}
+.fl-head strong { font-family: var(--display); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--txt); }
+.fl-head:hover strong { color: #fff; }
+.fl-head:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; border-radius: 9px; }
+.fl-date { font-family: var(--mono); font-size: 10px; color: var(--dim); white-space: nowrap; }
 .fl-sw { flex: none; width: 15px; height: 3px; border-radius: 2px; background: #fff; box-shadow: 0 0 0 1.5px rgba(6,10,20,.95); }
-.fl-tier { margin-left: auto; flex: none; padding: 1px 6px; border-radius: 999px; font-size: 9px; letter-spacing: .03em; white-space: nowrap; }
+.fl-tier { flex: none; padding: 1px 6px; border-radius: 999px; font-size: 9px; letter-spacing: .03em; white-space: nowrap; }
 .fl-tier.live { background: rgba(60,200,140,.18); color: #7BE0C3; border: 1px solid rgba(123,224,195,.3); }
 .fl-tier.bundled { background: rgba(255,214,120,.14); color: #FFD678; border: 1px solid rgba(255,214,120,.28); }
+.fl-caret { margin-left: auto; flex: none; font-family: var(--mono); font-size: 12px; color: var(--dim2, #63748C); }
+.fl-body { padding: 0 10px 9px; border-top: 1px solid var(--line); margin-top: 2px; padding-top: 8px; }
 .fl-rows { margin: 0; display: grid; gap: 2px; }
 .fl-rows > div { display: flex; gap: 8px; align-items: baseline; }
 .fl-rows dt { flex: none; width: 92px; color: var(--dim2, #7E93AD); font-size: 10px; }
@@ -872,3 +881,21 @@ ul.cmplist li { display: flex; flex-direction: column; gap: 2px; border-left: 2p
   border-top: 2px dashed #00D9FF;
   height: 0;
 }
+
+/* ── Layer groups ────────────────────────────────────────────────────────
+   A heading and a count per group. Seventeen checkboxes in one column made
+   the reader scan every label; grouped, the shape of the list does the work. */
+.laygroup { margin-bottom: 14px; }
+.laygroup:last-child { margin-bottom: 0; }
+.laygroup > h4 {
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 0 0 6px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--display); font-size: 10.5px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--dim);
+}
+.laygroup > h4 span {
+  margin-left: auto; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .04em; color: var(--dim2, #63748C);
+}
+.laygroup > h4 span.on { color: var(--acc); }

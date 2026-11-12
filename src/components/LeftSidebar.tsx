@@ -2,11 +2,25 @@ import { useMemo } from 'react';
 import { COUNTRY_CODES, ORGS, SNAPSHOT_DATE, countryName } from '../data';
 import { STATUS_COLOR } from '../lib/selectors';
 import { useStore, type StatusFilter } from '../store';
-import { fmtDate, fmtNum, useT } from '../i18n';
+import { fmtDate, fmtNum, useT, type StrKey } from '../i18n';
 import { Ad } from './Commerce';
 import type { ConflictType, LayerId } from '../types';
 
-const LAYERS: LayerId[] = ['territories', 'sourceline', 'fronts', 'conflicts', 'attacks', 'incidents', 'flashpoints', 'alliances', 'routes', 'chokepoints', 'energy', 'links', 'sanctions', 'displacement', 'events', 'borders', 'hydro'];
+/**
+ * The layers, grouped by what they are about rather than listed flat.
+ *
+ * Seventeen checkboxes in one column is a wall: the reader has to read every
+ * label to find the one they want, and the fact that control, the front line
+ * and the derived contact lines belong together is invisible. Grouping says
+ * that much without a word of explanation.
+ */
+const GROUPS: { id: StrKey; layers: LayerId[] }[] = [
+  { id: 'g_control', layers: ['territories', 'sourceline', 'fronts'] },
+  { id: 'g_events', layers: ['conflicts', 'flashpoints', 'attacks', 'incidents', 'events'] },
+  { id: 'g_trade', layers: ['routes', 'chokepoints', 'energy', 'sanctions'] },
+  { id: 'g_people', layers: ['displacement', 'alliances', 'links'] },
+  { id: 'g_base', layers: ['borders', 'hydro'] },
+];
 const STATUSES: { k: StatusFilter; c: string }[] = [
   { k: 'tier4', c: STATUS_COLOR.tier4 }, { k: 'tier3', c: STATUS_COLOR.tier3 }, { k: 'tier2', c: STATUS_COLOR.tier2 },
   { k: 'tier1', c: STATUS_COLOR.tier1 }, { k: 'ceasefire', c: STATUS_COLOR.ceasefire }, { k: 'flashpoint', c: STATUS_COLOR.flashpoint },
@@ -29,8 +43,18 @@ export default function LeftSidebar() {
       <div className="panel-scroll">
         <section className="sec">
           <h3>{t('layers')}</h3>
+          {GROUPS.map((g) => {
+            const on = g.layers.filter((l) => s.layers[l]).length;
+            return (
+          <div className="laygroup" key={g.id}>
+            <h4>
+              {t(g.id)}
+              {/* How many of this group are on, so a collapsed-looking group
+                  still says whether anything in it is showing. */}
+              <span className={on ? 'on' : ''}>{on}/{g.layers.length}</span>
+            </h4>
           <ul className="opts">
-            {LAYERS.map((l) => (
+            {g.layers.map((l) => (
               <li key={l} className="layerrow">
                 <label><input type="checkbox" checked={s.layers[l]} onChange={() => s.toggleLayer(l)} /><span>{t(`l_${l}`)}</span></label>
                 {s.layers[l] && (
@@ -52,6 +76,9 @@ export default function LeftSidebar() {
               </li>
             ))}
           </ul>
+          </div>
+            );
+          })}
         </section>
 
         <section className="sec">

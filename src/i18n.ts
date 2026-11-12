@@ -3,7 +3,8 @@ import type { L, Lang } from './types';
 import { useStore } from './store';
 
 /** Interface strings: [norsk, English]. Norwegian is the default language. */
-const S = {
+/** The string table. Exported so tests can check that nothing is unlabelled. */
+export const S = {
   appTagline: ['Geopolitisk etterretningsatlas', 'Geopolitical intelligence atlas'],
   overview: ['Oversikt', 'Overview'],
   search: ['Søk', 'Search'],
@@ -39,6 +40,11 @@ const S = {
   rt_method: ['Beregnet korteste vei i Eurostats maritime nettverk (2025)', 'Shortest path over the Eurostat maritime network (2025)'],
   rt_nottraffic: ['Viser en mulig seilas, ikke m\u00e5lt trafikk', 'Shows a possible voyage, not measured traffic'],
   rt_detour: ['lengre', 'longer'],
+  g_control: ['Kontroll og frontlinjer', 'Control and front lines'],
+  g_events: ['Konflikter og hendelser', 'Conflicts and incidents'],
+  g_trade: ['Handel og energi', 'Trade and energy'],
+  g_people: ['Mennesker og relasjoner', 'People and relations'],
+  g_base: ['Grunnkart', 'Base map'],
   lg_rt_computed: ['Heltrukket: beregnet seilingsrute', 'Solid: computed sailing route'],
   lg_rt_drawn: ['Stiplet: skjematisk korridor', 'Dashed: schematic corridor'],
   openDetail: ['\u00c5pne detaljkart', 'Open detailed map'],
