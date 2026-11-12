@@ -865,3 +865,10 @@ ul.cmplist li { display: flex; flex-direction: column; gap: 2px; border-left: 2p
   }
   .views::-webkit-scrollbar { display: none; }
 }
+
+/* A dashed swatch, for the legend entry that explains a dashed line. */
+.sw.line.dashed {
+  background: none !important;
+  border-top: 2px dashed #00D9FF;
+  height: 0;
+}

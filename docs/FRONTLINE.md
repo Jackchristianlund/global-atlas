@@ -262,3 +262,45 @@ records, the fit-to-bbox zoom and its clamps, refusal to guess an extent for an
 unknown country, that glyph requests are answered in memory and
 non-glyph URLs pass through untouched, and that the bundled base declares its licence
 and its scale.
+
+---
+
+# Addendum, 12 November 2026 — trade routes
+
+The sea, oil and LNG lanes were hand-placed waypoints, labelled illustrative.
+Honest, but a line drawn by eye does not know where the water is, and it cannot
+tell you what closing the Red Sea costs.
+
+They are now shortest paths over the **2025 Eurostat maritime network**,
+computed with `searoute-ts` (MIT), each subject to the canal and strait
+constraints that define it: a Suez route is required through Suez, a Cape route
+is blocked from it, and the Lombok alternative is defined the way a master
+would define it — not through Malacca.
+
+| route | computed | passages |
+|---|---|---|
+| Asia–Europe via Suez | 19,510 km | Malacca, Bab-el-Mandeb, Suez, Gibraltar, Dover |
+| Asia–Europe via the Cape | 26,220 km | Malacca, Dover |
+| Gulf–Europe via Suez | 11,930 km | Hormuz, Bab-el-Mandeb, Suez, Gibraltar |
+| Gulf–Europe via the Cape | 20,776 km | Hormuz, Dover |
+
+The Cape diversion is a third further on the Asia–Europe run and three quarters
+further from the Gulf. Those are the numbers that make a chokepoint mean
+something, and they can be checked: Shanghai–Rotterdam via Suez is usually
+quoted near 10,500 nautical miles, about 19,400 km.
+
+**What this is not.** A computed voyage says where a ship could reasonably
+sail. It says nothing about how many do. There is no AIS, no traffic density
+and no tonnage here, and the app does not imply any: the method line and the
+"not measured traffic" note travel with the data.
+
+Land corridors keep their hand-placed waypoints and keep saying so. A rail
+network is a different dataset; drawing one by eye and calling it computed
+would be worse than admitting the sketch.
+
+**On the map**, that distinction is now carried by the line itself — solid for
+computed geometry, dashed for a schematic corridor — and stated in the legend,
+so a reader can tell them apart without being told. The lanes also hold a
+constant width on screen at any altitude and sit on a dark casing, because at
+globe distance the old 0.26° stroke came to about one and a half pixels and
+simply vanished.

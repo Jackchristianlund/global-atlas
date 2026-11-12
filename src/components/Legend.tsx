@@ -30,6 +30,10 @@ export default function Legend() {
           <li><i className="sw box" style={{ background: 'rgba(77,140,255,.55)' }} />{t('lg_terrGov')}</li>
           <li><i className="sw box" style={{ background: 'rgba(214,69,61,.55)' }} />{t('lg_terrOcc')}</li>
           <li><i className="sw line" style={{ background: '#FFD678' }} />{t('ct_line')}</li>
+          {/* The difference between a computed lane and a sketch is carried by
+              the line itself, so it has to be stated once, here. */}
+          <li><i className="sw line" style={{ background: '#00D9FF' }} />{t('lg_rt_computed')}</li>
+          <li><i className="sw line dashed" style={{ background: '#00D9FF' }} />{t('lg_rt_drawn')}</li>
         </ul>
         <button type="button" className="legend-more" onClick={() => setOpen(true)} aria-expanded={false}>
           ⊞ {t('legend')}

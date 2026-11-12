@@ -20,11 +20,12 @@ import { ACTOR, REGION } from '../data/territory';
 import { visibleConflicts } from '../lib/visible';
 import { SNAPSHOT_YEAR, useStore } from '../store';
 import { FLOW, flowWeight, flowsAt } from '../lib/displacement';
+import { isComputed, routeKm, routePoints } from '../lib/routes';
 import { frontlinePaths } from '../lib/frontline';
 import { ATTACK, CATEGORY_COLOR, attacksUpTo } from '../lib/attacks';
 import { EMPTY, binAt, binIndex, binResolution, binSummary, loadIncidents, pointsUpTo, type Incidents, type Point } from '../lib/incidents';
 import { fmtDate, fmtNum, pick, tr } from '../i18n';
-import type { ImpactLink, Iso, Route, Selection } from '../types';
+import type { ImpactLink, Iso, Lang, Route, Selection } from '../types';
 
 interface Marker { key: string; kind: 'conflict' | 'chokepoint' | 'site' | 'disputed' | 'event' | 'front' | 'place' | 'attack'; lat: number; lng: number; color: string; label: string; cls: string; op: number; go: () => void }
 interface Arc { id: string; s: LatLng; e: LatLng; color: string; dash: number; gap: number; time: number; label: string; w?: number; flow?: string }
@@ -61,6 +62,19 @@ function lift(pts: LatLng[], alt: number): PathPt[] {
   return pts.map(([lat, lng]) => [lat, lng, alt] as PathPt);
 }
 
+/**
+ * What a route's tooltip says. A computed lane carries its length, because the
+ * length is the point: a chokepoint matters in kilometres, not in adjectives.
+ */
+function routeLabel(r: Route, lang: Lang): string {
+  const kind = tr(`rk_${r.kind}`, lang);
+  if (isComputed(r.id)) {
+    const km = routeKm(r.id);
+    return `${pick(r.name, lang)} \u00b7 ${kind}${km ? ` \u00b7 ${fmtNum(km, lang)} km` : ''} \u00b7 ${tr('rt_computed', lang)}`;
+  }
+  return `${pick(r.name, lang)} \u00b7 ${kind}${r.kind === 'pipeline' ? '' : ` \u00b7 ${tr('illustrative', lang)}`}`;
+}
+
 interface PathD { id: string; pts: PathPt[]; color: string; stroke: number; dash: number; gap: number; time: number; label: string }
 interface Ring { lat: number; lng: number; color: string; max: number; speed: number; period: number }
 
@@ -93,7 +107,11 @@ function frontUnit(frontId: string, year: number): string | null {
   return best?.id ?? null;
 }
 
-const DENSE: Record<string, LatLng[]> = Object.fromEntries(ALL_ROUTES.map((r) => [r.id, densify(r.pts, r.kind === 'pipeline' || r.kind === 'rail' ? 400 : 220)]));
+// Computed sea lanes already follow the network closely, so they need far
+// less densifying than a sketch drawn with a handful of waypoints.
+const DENSE: Record<string, LatLng[]> = Object.fromEntries(
+  ALL_ROUTES.map((r) => [r.id, densify(routePoints(r), isComputed(r.id) ? 120 : r.kind === 'pipeline' || r.kind === 'rail' ? 400 : 220)]),
+);
 
 export default function GlobeView() {
   const s = useStore();
@@ -655,6 +673,9 @@ export default function GlobeView() {
     // is quantised by the caller, so this rebuilds a handful of times across a
     // zoom rather than on every frame.
     const contactW = strokeForPx(2.6, altStep, size.h);
+    // Routes keep their weight on screen at any altitude, like the front line.
+    const routeCoreW = strokeForPx(2.1, altStep, size.h);
+    const routeCaseW = strokeForPx(5.0, altStep, size.h);
     const sc = view === 'scenario' ? SCENARIO[scenarioId] : null;
     const base = new Set(sc?.detours.map((d) => d.base));
     const alt = new Set(sc?.detours.map((d) => d.alt));
@@ -663,18 +684,49 @@ export default function GlobeView() {
       const rop = r.kind === 'pipeline' ? layerOpacity.energy : layerOpacity.routes;
       const isSel = sel?.kind === 'route' && sel.id === r.id;
       const through = selCp !== null && r.via.includes(selCp);
-      let color = hexA(ROUTE_COLOR[r.kind], 0.8 * rop);
-      let strokeW = r.kind === 'pipeline' ? 0.22 : r.kind === 'rail' ? 0.2 : 0.26;
-      let dash = r.kind === 'pipeline' ? 1 : r.kind === 'rail' ? 0.012 : 0.035;
-      let gap = r.kind === 'pipeline' ? 0 : r.kind === 'rail' ? 0.012 : 0.02;
-      let time = r.kind === 'pipeline' || r.kind === 'rail' || lowPower ? 0 : 90000;
+      // Solid where the geometry was computed over the maritime network,
+      // dashed where it is still a sketch. The reader can then tell the two
+      // apart without being told, and the dash stops meaning nothing.
+      const drawn = !isComputed(r.id);
+      const pts = lift(DENSE[r.id], PATH_ALT.route);
+      const label = routeLabel(r, lang);
+
+      let color = hexA(ROUTE_COLOR[r.kind], 0.92 * rop);
+      let weight = 1;
+      let dimmed = false;
       if (sc) {
-        if (base.has(r.id)) { color = 'rgba(255,69,69,0.95)'; strokeW = 0.4; dash = 0.012; gap = 0.012; time = 0; }
-        else if (alt.has(r.id)) { color = 'rgba(0,217,255,1)'; strokeW = 0.5; }
-        else color = hexA(ROUTE_COLOR[r.kind], 0.18);
-      } else if (isSel || through) { color = isSel ? '#FFFFFF' : hexA(ROUTE_COLOR[r.kind], rop); strokeW = 0.5; }
-      else if (selCp !== null) color = hexA(ROUTE_COLOR[r.kind], 0.22 * rop);
-      out.push({ id: r.id, pts: lift(DENSE[r.id], PATH_ALT.route), color, stroke: strokeW, dash, gap, time, label: `${pick(r.name, lang)} · ${tr(`rk_${r.kind}`, lang)}${r.kind === 'pipeline' ? '' : ` · ${tr('illustrative', lang)}`}` });
+        if (base.has(r.id)) { color = `rgba(255,69,69,${0.97 * rop})`; weight = 1.5; }
+        else if (alt.has(r.id)) { color = `rgba(0,217,255,${rop})`; weight = 1.6; }
+        else { color = hexA(ROUTE_COLOR[r.kind], 0.2 * rop); dimmed = true; }
+      } else if (isSel) { color = `rgba(255,255,255,${rop})`; weight = 1.7; }
+      else if (through) { color = hexA(ROUTE_COLOR[r.kind], rop); weight = 1.45; }
+      else if (selCp !== null) { color = hexA(ROUTE_COLOR[r.kind], 0.22 * rop); dimmed = true; }
+
+      // A dark casing under the line, so a cyan lane stays legible over both
+      // open ocean and bright desert. Skipped when the route is dimmed into
+      // the background, where an outline would only add noise.
+      // The casing has to carry the same dash as the line above it. Solid
+      // under a dashed line fills every gap, and the sketch reads as a solid
+      // dark rope instead of a sketch.
+      const dash = drawn ? 0.012 : 0;
+      const gap = drawn ? 0.012 : 0;
+      if (!dimmed) {
+        out.push({
+          id: `rt-case:${r.id}`, pts,
+          color: `rgba(5,9,17,${0.72 * rop})`, stroke: routeCaseW * weight,
+          dash, gap, time: 0, label,
+        });
+      }
+      out.push({ id: r.id, pts, color, stroke: routeCoreW * weight, dash, gap, time: 0, label });
+      // A slow bright pulse along the computed lanes, to read direction at a
+      // glance. Carried on its own path so the line underneath stays solid.
+      if (!drawn && !dimmed && !lowPower && r.kind !== 'pipeline') {
+        out.push({
+          id: `rt-flow:${r.id}`, pts,
+          color: lighten(ROUTE_COLOR[r.kind], 0.5, 0.85 * rop), stroke: routeCoreW * weight * 0.55,
+          dash: 0.05, gap: 0.42, time: 120000, label,
+        });
+      }
     };
     if (layers.routes) for (const r of ROUTES) if (view !== 'energy' || r.kind === 'oil' || r.kind === 'lng') add(r);
     if (layers.energy) for (const p of PIPELINES) add(p);
