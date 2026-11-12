@@ -12,7 +12,7 @@ const T = topo as unknown as {
 describe('the administrative geometry is a topology', () => {
   it('holds every unit the control data refers to', () => {
     const geoms = T.objects.units.geometries;
-    expect(geoms).toHaveLength(151);
+    expect(geoms).toHaveLength(152);
     const have = new Set(geoms.map((g) => `${g.properties.iso}:${g.properties.code}`));
     for (const r of CONTROL) expect(have, `${r.iso}:${r.code}`).toContain(`${r.iso}:${r.code}`);
   });

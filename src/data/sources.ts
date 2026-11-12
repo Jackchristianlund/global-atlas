@@ -162,6 +162,20 @@ export const SOURCES: Record<string, Source> = {
   wikiLibyaCF: { title: 'Libyan Civil War (2014–2020) and the October 2020 ceasefire', publisher: W, url: 'https://en.wikipedia.org/wiki/Libyan_civil_war_(2014%E2%80%932020)', date: '2026-11-10' },
   ne10m: { title: 'Natural Earth 1:10m Admin 1 \u2013 States, Provinces', publisher: 'Natural Earth (public domain), via nvkelso/natural-earth-vector', url: 'https://github.com/nvkelso/natural-earth-vector', date: '2026-11-10' },
 
+  // ── Sudan: Kordofan, Heglig and the war economy ─────────────────────────
+  gbSdn: { title: 'Sudan state boundaries (ADM1), gbOpen release \u2014 all 18 states with ISO 3166-2 codes, unlike Natural Earth\u2019s pre-2013 layer', publisher: 'geoBoundaries (CC BY 3.0 IGO)', url: 'https://www.geoboundaries.org/', date: '2020-01-01' },
+  cirBabanusa: { title: 'RSF takeover of the 22nd Division base in Babanusa, West Kordofan (satellite imagery and geolocated video)', publisher: 'Centre for Information Resilience, Sudan Witness', url: 'https://www.info-res.org/sudan-witness/reports/rsf-takeover-of-the-22nd-division-base-in-babanusa-west-kordofan/', date: '2026-01-21' },
+  insightsKord: { title: 'Contraction of the War within Kordofan: North, South and West', publisher: 'Insights \u2013 Sudan Conflict Dataset', url: 'https://insights-sd.org/en/contraction-of-the-war-within-kordofan-north-south-and-west/', date: '2025-12-14' },
+  stHeglig: { title: 'Paramilitary RSF extracts oil transit fees as Heglig pumps 26,000 bpd', publisher: 'Sudan Tribune', url: 'https://sudantribune.com/article/319333', date: '2026-09-27' },
+  swmHeglig: { title: 'Heglig oilfield placed under neutral South Sudan protection (tripartite deal; SAF 90th Brigade withdrawal)', publisher: 'Sudan War Monitor', url: 'https://sudanwarmonitor.com/p/heglig-oilfield-placed-under-neutral', date: '2025-12-13' },
+  trtHeglig: { title: 'South Sudan announces deal with Sudanese warring parties to take control of Heglig oilfield', publisher: 'TRT World', url: 'https://www.trtworld.com/article/d060416a4883', date: '2025-12-12' },
+  stIyalBakhit: { title: 'Sudanese army captures strategic town in West Kordofan, downs drone', publisher: 'Sudan Tribune', url: 'https://sudantribune.com/article/320981', date: '2026-11-07' },
+  stWestKord: { title: 'Sudan army, allies advance against RSF in West Kordofan, down third drone', publisher: 'Sudan Tribune', url: 'https://sudantribune.com/article/321005', date: '2026-11-08' },
+  aaKhuwei: { title: 'Sudanese army downs 4th drone in week as troops advance against RSF in West Kordofan', publisher: 'Anadolu Agency', url: 'https://www.aa.com.tr/en/middle-east/sudanese-army-downs-4th-drone-in-week-as-troops-advance-against-rsf-in-west-kordofan/4116366', date: '2026-11-09' },
+  ohchrGum: { title: 'Business and Human Rights in Conflict: Gum Arabic from Sudan', publisher: 'UN Human Rights Office (OHCHR)', url: 'https://www.ohchr.org/en/stories/2026/07/hidden-cost-gum-arabic-inside-sudans-war-economy', date: '2026-07-15' },
+  unGumGold: { title: 'Looted gold and gum arabic are bankrolling Sudan\u2019s war, UN warns (2024 gold production and export figures)', publisher: 'UN News', url: 'https://news.un.org/en/story/2026/07/1167944', date: '2026-07-15' },
+  ajGum: { title: 'How is gum arabic fuelling the war in Sudan?', publisher: 'Al Jazeera', url: 'https://www.aljazeera.com/news/2026/1/6/how-is-gum-arabic-fuelling-the-war-in-sudan', date: '2026-01-06' },
+
   // ── Myanmar: townships, martial law, autonomous areas ───────────────────
   gbMmr: { title: 'Myanmar township boundaries (ADM3), gbOpen release, built from The Myanmar Analytics Project / USAID', publisher: 'geoBoundaries (CC BY 4.0)', url: 'https://www.geoboundaries.org/', date: '2023-12-12' },
   dmgMartial: { title: 'Junta extends martial law in 55 townships, including AA-held areas', publisher: 'Development Media Group (Arakan)', url: 'https://www.dmediag.com/news/jemli.html', date: '2026-10-19' },

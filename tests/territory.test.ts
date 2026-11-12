@@ -156,9 +156,49 @@ describe('territorial control data', () => {
     expect(statusLabel.contested[0]).toBe('Omstridt');
   });
 
+  /**
+   * Natural Earth's admin-1 layer for Sudan predates the creation of West
+   * Kordofan in 2013, so Babanusa, El Fula and the Heglig oilfield — the main
+   * front of the war — sat inside the polygon labelled South Kordofan, and the
+   * state the control data assigned them to was the wrong one. Sudan now comes
+   * from geoBoundaries instead. This checks the towns land where they belong,
+   * because a wrong boundary is invisible until something is placed on it.
+   */
+  it('puts Sudan\u2019s Kordofan towns in the state they are actually in', () => {
+    type Geom = { type: string; coordinates: number[][][] | number[][][][] };
+    const units = admin1 as { iso: string; code: string; name: string; geometry: Geom }[];
+    const sdn = units.filter((u) => u.iso === 'SDN');
+    expect(sdn).toHaveLength(18);
+    expect(sdn.map((u) => u.code)).toContain('SD-GK');
+
+    const rings = (g: Geom) => (g.type === 'Polygon' ? [g.coordinates] : g.coordinates) as number[][][][];
+    const inside = (pt: [number, number], g: Geom) => {
+      let hit = false;
+      for (const poly of rings(g)) {
+        for (let ri = 0; ri < poly.length; ri++) {
+          const r = poly[ri];
+          let c = false;
+          for (let i = 0; i < r.length - 1; i++) {
+            const [x0, y0] = r[i], [x1, y1] = r[i + 1];
+            if ((y0 > pt[1]) !== (y1 > pt[1]) && pt[0] < x0 + ((pt[1] - y0) / (y1 - y0)) * (x1 - x0)) c = !c;
+          }
+          if (ri === 0) { if (c) hit = true; } else if (c) hit = false;
+        }
+      }
+      return hit;
+    };
+    const where = (pt: [number, number]) => sdn.filter((u) => inside(pt, u.geometry)).map((u) => u.code);
+
+    expect(where([27.80, 11.32])).toEqual(['SD-GK']); // Babanusa
+    expect(where([28.35, 11.73])).toEqual(['SD-GK']); // El Fula, the state capital
+    expect(where([29.40, 9.93])).toEqual(['SD-GK']);  // Heglig oilfield
+    expect(where([29.72, 11.01])).toEqual(['SD-KS']); // Kadugli, South Kordofan
+    expect(where([30.22, 13.18])).toEqual(['SD-KN']); // El Obeid, North Kordofan
+  });
+
   it('the geometry is real administrative geography, not drawn by hand', () => {
     const units = admin1 as { iso: string; code: string; name: string; geometry: { type: string; coordinates: number[][][][] } }[];
-    expect(units.length).toBe(151);
+    expect(units.length).toBe(152);
     expect(new Set(units.map((u) => `${u.iso}:${u.code}`)).size).toBe(units.length);
     for (const u of units) {
       // topojson emits Polygon for a single-ring unit and MultiPolygon otherwise.

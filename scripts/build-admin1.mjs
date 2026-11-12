@@ -11,6 +11,17 @@
  * Source: Natural Earth 1:10m admin-1 states and provinces (public domain).
  * Abkhazia and South Ossetia are not admin-1 units and are carried over from
  * Natural Earth's disputed-areas layer via the previous build.
+ *
+ * One country does not come from Natural Earth. Sudan's admin-1 layer there is
+ * stuck before 2013: it has 17 units and no West Kordofan, so the area around
+ * Babanusa, El Fula and the Heglig oilfield — the main front of the current war
+ * — sat inside the polygon labelled South Kordofan. Its ISO codes for Sudan are
+ * also wrong in places: Central Darfur is tagged SD-DE, and Eastern and
+ * Southern Darfur share SD-DS. Sudan is therefore taken from geoBoundaries
+ * instead (CC BY 3.0 IGO, boundary year 2020), which carries all 18 states with
+ * correct ISO 3166-2 codes. Abyei is excluded: it is administered jointly under
+ * the 2005 protocol and claimed by both Sudan and South Sudan, and filing it
+ * under either would be a claim this atlas has no source for.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { topology } from 'topojson-server';
@@ -23,11 +34,31 @@ const KEEP = Number(process.argv[4] ?? 0.06); // share of vertices to keep
 const previous = JSON.parse(readFileSync('src/data/admin1.units.json', 'utf8'));
 const want = new Map(previous.map((u) => [`${u.iso}:${u.code}`, u]));
 
+/**
+ * Countries whose admin-1 geometry does not come from Natural Earth, with the
+ * geoBoundaries file to use instead. Every unit in the override file is kept,
+ * so the whitelist does not have to list a unit before it can appear.
+ */
+const OVERRIDE = { SDN: process.env.SDN_ADM1 ?? '/home/claude/dl/sdn/adm1.geojson' };
+const overridden = new Set(Object.keys(OVERRIDE));
+const extra = [];
+for (const [iso, file] of Object.entries(OVERRIDE)) {
+  const src = JSON.parse(readFileSync(file, 'utf8'));
+  for (const f of src.features) {
+    const code = f.properties.shapeISO;
+    // Abyei carries no ISO code because no single state administers it.
+    if (!code || code === 'N/A') { console.log(`skipped, no ISO code: ${f.properties.shapeName}`); continue; }
+    extra.push({ type: 'Feature', properties: { iso, code, name: f.properties.shapeName }, geometry: f.geometry });
+  }
+  console.log(`override: ${iso} from ${file} (${extra.length} units)`);
+}
+
 const raw = JSON.parse(readFileSync(NE, 'utf8'));
 const features = [];
 const seen = new Set();
 for (const f of raw.features) {
   const p = f.properties;
+  if (overridden.has(p.adm0_a3)) continue;
   // Natural Earth files Crimea and Sevastopol under Russia; this dataset shows
   // military control separately from sovereignty and keeps them Ukrainian, so
   // the unit is matched on its ISO 3166-2 code when the country code differs.
@@ -41,9 +72,11 @@ for (const f of raw.features) {
   const u = want.get(key);
   features.push({ type: 'Feature', properties: { iso: u.iso, code: u.code, name: u.name }, geometry: f.geometry });
 }
+features.push(...extra);
+
 // Units with no admin-1 counterpart keep the geometry from the previous build.
 for (const [key, u] of want) {
-  if (seen.has(key)) continue;
+  if (seen.has(key) || overridden.has(u.iso)) continue;
   features.push({ type: 'Feature', properties: { iso: u.iso, code: u.code, name: u.name }, geometry: u.geometry });
   console.log(`carried over: ${key}`);
 }

@@ -17,7 +17,7 @@ const C = {
   nor: cty('NOR', 'Norge', 'Norway', 61, 9), sdn: cty('SDN', 'Sudan', 'Sudan', 15.5, 32.5), are: cty('ARE', 'Emiratene', 'UAE', 24.4, 54.4),
   eth: cty('ETH', 'Etiopia', 'Ethiopia', 9, 39), tcd: cty('TCD', 'Tsjad', 'Chad', 13.5, 21.5), cod: cty('COD', 'Øst-Kongo', 'Eastern DR Congo', -1.68, 29.22),
   rwa: cty('RWA', 'Rwanda', 'Rwanda', -1.95, 30.06), eri: cty('ERI', 'Eritrea', 'Eritrea', 15.3, 38.9), usa: cty('USA', 'USA', 'United States', 38.9, -77),
-  mmr: cty('MMR', 'Myanmar', 'Myanmar', 21.5, 96.5), mli: cty('MLI', 'Mali', 'Mali', 12.65, -8), isr: cty('ISR', 'Israel', 'Israel', 31.8, 35.0),
+  mmr: cty('MMR', 'Myanmar', 'Myanmar', 21.5, 96.5), ssd: cty('SSD', 'S\u00f8r-Sudan', 'South Sudan', 7.0, 30.0), mli: cty('MLI', 'Mali', 'Mali', 12.65, -8), isr: cty('ISR', 'Israel', 'Israel', 31.8, 35.0),
 };
 
 let n = 0;
@@ -139,6 +139,14 @@ export const LINKS: ImpactLink[] = [
   link('sdn', C.sdn, C.eth, 'diplomatic', 'observed', 'medium', '2026-11-04',
     ['Sudan anklager Etiopia for å huse oppskytingssteder for RSF-droner.', 'Sudan accuses Ethiopia of hosting launch sites for RSF drones.'],
     ['Anklagen er ikke uavhengig bekreftet. Den viser hvordan krigen belaster forholdet mellom nabolandene.', 'The accusation is not independently confirmed. It shows how the war strains relations between the neighbours.'], 'cfrSudan'),
+  link('sdn', C.sdn, C.eu, 'trade', 'observed', 'high', '2026-07-15',
+    ['Sudan sto for 70\u201380 % av verdens eksport av r\u00e5 gummi arabicum f\u00f8r krigen, og Kordofan for omtrent halvparten av produksjonen.', 'Sudan accounted for 70\u201380% of world exports of crude gum arabic before the war, and Kordofan for roughly half of production.'],
+    ['Stoffet binder leskedrikk, godteri, kosmetikk og legemidler, og har ingen enkel erstatning. FN finner at RSF omdirigerer betydelige mengder fra Vest-Kordofan og Darfur gjennom S\u00f8r-Sudan til Mombasa, slik at kjeden l\u00f8per gjennom omr\u00e5der en part i krigen holder.', 'It binds soft drinks, confectionery, cosmetics and pharmaceuticals, and has no simple substitute. The UN finds the RSF redirects significant quantities from West Kordofan and Darfur through South Sudan to Mombasa, so the chain runs through ground a party to the war holds.'],
+    'ohchrGum', 'unGumGold', 'ajGum'),
+  link('sdn', C.sdn, C.ssd, 'energy', 'observed', 'high', '2026-09-27',
+    ['Nesten all s\u00f8rsudansk r\u00e5olje g\u00e5r gjennom Heglig i Vest-Kordofan, som RSF tok 8. desember 2025.', 'Nearly all South Sudanese crude passes through Heglig in West Kordofan, which the RSF took on 8 December 2025.'],
+    ['S\u00f8r-Sudan lever nesten utelukkende av oljeinntekter og betaler n\u00e5 RSF om lag fire dollar per fat for \u00e5 slippe gjennom. Nabolandets statsbudsjett er dermed knyttet til en part i Sudans krig.', 'South Sudan lives almost entirely on oil revenue and now pays the RSF about four dollars a barrel for passage. Its national budget is therefore tied to a party in Sudan\u2019s war.'],
+    'stHeglig', 'swmHeglig', 'trtHeglig'),
   link('eth', C.eth, C.eri, 'diplomatic', 'observed', 'high', '2026-10-01',
     ['Etiopia utviste eritreiske diplomater, og Eritrea brøt de diplomatiske forbindelsene.', 'Ethiopia expelled Eritrean diplomats and Eritrea severed diplomatic relations.'],
     ['Etiopia anklager Eritrea for å støtte TPLF. Striden om havtilgang øker faren for mellomstatlig konflikt.', 'Ethiopia accuses Eritrea of backing the TPLF. The dispute over sea access raises the risk of interstate conflict.'], 'cw1026'),
