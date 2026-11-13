@@ -107,7 +107,11 @@ export default function RegionMap() {
   const frame = useStore((st) => st.frame);
   const control = useStore((st) => st.control);
   const loadControl = useStore((st) => st.loadControl);
-  useEffect(() => { void loadControl(); }, [loadControl]);
+  // As on the globe: ISW's layer is a few megabytes, fetched only once the
+  // map is over Ukraine (or the war is selected), not for a look at Yemen.
+  const overUkraine = useStore((st) => (st.sel?.kind === 'conflict' && st.sel.id === 'ukr')
+    || (st.mapView.lat > 43 && st.mapView.lat < 54 && st.mapView.lng > 20 && st.mapView.lng < 42));
+  useEffect(() => { if (overUkraine) void loadControl(); }, [overUkraine, loadControl]);
   const bound = useRef(false);
   const { t, lang } = useT();
   const s = useStore();
