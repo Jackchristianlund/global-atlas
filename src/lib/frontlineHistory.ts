@@ -118,6 +118,22 @@ export async function loadMonth(
 }
 
 /** ISO date of the first of a month in the series, for labels. */
+/**
+ * The month line to compare with the current line for "what moved lately":
+ * the latest one at least `minDays` older than the current assessment, so
+ * the window is about a month rather than a few days of noise. Null when no
+ * month line is old enough (or the current date is unreadable).
+ */
+export function recentMonth(currentDate: string, minDays = 28): HistoryMonth | null {
+  const now = Date.parse(currentDate);
+  if (!Number.isFinite(now)) return null;
+  let best: HistoryMonth | null = null;
+  for (const m of HISTORY_MONTHS) {
+    if ((now - Date.parse(monthDate(m))) / 86_400_000 >= minDays) best = m;
+  }
+  return best;
+}
+
 export function monthDate(month: HistoryMonth): string {
   return `${HISTORY_YEAR}-${String(month).padStart(2, '0')}-01`;
 }

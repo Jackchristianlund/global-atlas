@@ -1198,3 +1198,10 @@ html, body { overflow-x: hidden; }
 .globeloading { position: absolute; inset: 0; display: grid; place-items: center;
   background: radial-gradient(circle at 50% 50%, rgba(0,217,255,.07), transparent 45%), #05080F; }
 .globeloading span { font: 600 11px var(--display); letter-spacing: .18em; text-transform: uppercase; color: var(--dim); }
+
+/* ── Ukraine: recent changes, one click each ───────────────────────────── */
+.rc { display: grid; gap: 10px; }
+.rc-item { display: grid; gap: 4px; }
+.rc-item .btn { justify-self: start; }
+.rc-item .btn.on { background: rgba(0,217,255,.16); border-color: var(--cyan); color: var(--cyan); }
+.rc-item small { color: var(--muted, #8D9AB0); font-size: 11px; line-height: 1.4; }

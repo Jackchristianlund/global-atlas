@@ -4,7 +4,7 @@ import { EVENTS, EVENT_COLOR } from '../data';
 import { ACTOR, ACTORS, PLACES } from '../data/territory';
 import { SOURCES } from '../data/sources';
 import { BAB_EL_MANDEB, RED_SEA_BBOX, YEMEN_SITES } from '../data/yemen/explorer';
-import { HISTORY_MONTHS, monthDate, type HistoryMonth } from '../lib/frontlineHistory';
+import { HISTORY_MONTHS, monthDate, recentMonth, type HistoryMonth } from '../lib/frontlineHistory';
 import { ARCHIVE_DAYS } from '../lib/archiveDays';
 import { areaKm2 } from '../lib/control';
 import { km, padBbox, type ChangedStretch } from '../lib/frontDiff';
@@ -231,6 +231,57 @@ function ControlSince() {
   );
 }
 
+/**
+ * One click to "what moved lately", with the window stated. The front-line
+ * comparison uses OCHA's month line against the current one; the control
+ * comparison uses ISW's last clean archive day. Neither is shorter than the
+ * sources allow, and the limit is said rather than papered over.
+ */
+function RecentChanges({ iswShown }: { iswShown: boolean }) {
+  const { t, lang } = useT();
+  const current = useStore((s) => s.frontline.set.meta.assessmentDate);
+  const pair = useStore((s) => s.frontCompare);
+  const since = useStore((s) => s.controlSince);
+  const change = useStore((s) => s.controlChange);
+  const setPair = useStore((s) => s.setFrontCompare);
+  const setSince = useStore((s) => s.setControlSince);
+  const frameArea = useStore((s) => s.frameArea);
+  const month = recentMonth(current);
+  const lastDay = ARCHIVE_DAYS[ARCHIVE_DAYS.length - 1];
+  const [wantFrame, setWantFrame] = useState(false);
+  // Frame the change once it has been computed, when it was asked for from here.
+  useEffect(() => {
+    if (!wantFrame || change.status === 'loading' || change.status === 'idle') return;
+    if (change.status === 'ready' && change.change.bbox) frameArea(padBbox(change.change.bbox, 0.15));
+    setWantFrame(false);
+  }, [wantFrame, change, frameArea]);
+  const monthOn = !!pair && month !== null && pair.a === month && pair.b === 'now';
+  const ctlOn = since === lastDay;
+  return (
+    <div className="rc">
+      {month !== null && (
+        <div className="rc-item">
+          <button type="button" className={`btn${monthOn ? ' on' : ''}`} aria-pressed={monthOn}
+            onClick={() => (monthOn ? setPair(null) : setPair({ a: month, b: 'now' }, { frame: true }))}>
+            {t('rc_month')}
+          </button>
+          <small>{t('rc_monthNote').replace('{m}', MONTH_FMT(month, lang)).replace('{n}', fmtDate(current, lang))}</small>
+        </div>
+      )}
+      {iswShown && (
+        <div className="rc-item">
+          <button type="button" className={`btn${ctlOn ? ' on' : ''}`} aria-pressed={ctlOn}
+            onClick={() => { if (ctlOn) setSince(null); else { setSince(lastDay); setWantFrame(true); } }}>
+            {t('rc_ctl').replace('{d}', fmtDate(lastDay, lang))}
+          </button>
+          <small>{t('rc_ctlNote')}</small>
+        </div>
+      )}
+      <p className="note">{t('rc_limit')}</p>
+    </div>
+  );
+}
+
 export function UkraineExplorer() {
   const { t, lang } = useT();
   const meta = useStore((s) => s.frontline.set.meta);
@@ -262,6 +313,7 @@ export function UkraineExplorer() {
         </ul>
         <p className="note">{t('rx_noInfer')}</p>
       </Section>
+      <Section title={t('rc_title')}><RecentChanges iswShown={iswShown} /></Section>
       {iswShown && <Section title={t('cs_title')}><ControlSince /></Section>}
       <Section title={t('cmpf_title')}><FrontCompare /></Section>
       <Section title={t('rx_sources')}>

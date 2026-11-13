@@ -45,3 +45,16 @@ describe('image export', () => {
     useStore.setState({ sel: null });
   });
 });
+
+import { recentMonth } from '../src/lib/frontlineHistory';
+describe('recent changes window', () => {
+  it('takes the latest month line at least four weeks before the current assessment', () => {
+    expect(recentMonth('2026-11-04')).toBe(10);
+    expect(recentMonth('2026-10-28')).toBe(9);
+    expect(recentMonth('2026-11-30')).toBe(11);
+  });
+  it('gives nothing for an unreadable or too early date', () => {
+    expect(recentMonth('not a date')).toBeNull();
+    expect(recentMonth('2026-01-10')).toBeNull();
+  });
+});
