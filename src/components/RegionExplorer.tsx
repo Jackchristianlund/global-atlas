@@ -5,6 +5,8 @@ import { ACTOR, ACTORS, PLACES } from '../data/territory';
 import { SOURCES } from '../data/sources';
 import { BAB_EL_MANDEB, RED_SEA_BBOX, YEMEN_SITES } from '../data/yemen/explorer';
 import { HISTORY_MONTHS, monthDate, type HistoryMonth } from '../lib/frontlineHistory';
+import { ARCHIVE_DAYS } from '../lib/archiveDays';
+import { areaKm2 } from '../lib/control';
 import { km, padBbox, type ChangedStretch } from '../lib/frontDiff';
 import { ageInDays } from '../lib/frontline';
 import { snapshotYears, territoryFeatures } from '../lib/territory';
@@ -165,6 +167,70 @@ function ControlStatus() {
   );
 }
 
+/** Control on a day of ISW's archive against control now. */
+function ControlSince() {
+  const { t, lang } = useT();
+  const since = useStore((s) => s.controlSince);
+  const st = useStore((s) => s.controlChange);
+  const setSince = useStore((s) => s.setControlSince);
+  const frameArea = useStore((s) => s.frameArea);
+  const [day, setDay] = useState(ARCHIVE_DAYS[0]);
+  const [cities, setCities] = useState<Named[]>(ukrCities ?? []);
+  useEffect(() => { if (st.status === 'ready' && !cities.length) void loadUkrCities().then(setCities); }, [st.status, cities.length]);
+  const pieces = (mp: number[][][][]) => mp
+    .map((p) => {
+      const ring = p[0];
+      const lat = ring.reduce((a, q) => a + q[1], 0) / ring.length, lng = ring.reduce((a, q) => a + q[0], 0) / ring.length;
+      let w = Infinity, s2 = Infinity, e = -Infinity, n = -Infinity;
+      for (const [x, y] of ring) { w = Math.min(w, x); e = Math.max(e, x); s2 = Math.min(s2, y); n = Math.max(n, y); }
+      return { km2: areaKm2({ type: 'Polygon', coordinates: p }), at: [lat, lng] as [number, number], bbox: [w, s2, e, n] as [number, number, number, number] };
+    })
+    .sort((a, b) => b.km2 - a.km2)
+    .slice(0, 5);
+  const name = (at: [number, number]) => nearestPlace({ path: [at, at], maxKm: 0, lengthKm: 0, of: 'b', bbox: [at[1], at[0], at[1], at[0]] }, cities)?.name;
+  return (
+    <div className="fcmp">
+      <div className="fcmp-pick">
+        <label>
+          <span>{t('cs_since')}</span>
+          <select value={day} onChange={(e) => setDay(e.target.value)}>
+            {ARCHIVE_DAYS.map((d) => <option key={d} value={d}>{fmtDate(d, lang)}</option>)}
+          </select>
+        </label>
+        <label><span>{t('cmpf_to')}</span><select disabled value="now"><option value="now">{t('cmpf_now')}</option></select></label>
+      </div>
+      <div className="fcmp-actions">
+        <button type="button" className="btn" disabled={st.status === 'loading'} onClick={() => setSince(day)}>{since ? t('cmpf_rerun') : t('cmpf_run')}</button>
+        {since && <button type="button" className="mini" onClick={() => setSince(null)}>{t('cmpf_stop')}</button>}
+      </div>
+      {st.status === 'loading' && <p className="meta">{t('fl_h_loading')}</p>}
+      {st.status === 'unavailable' && <p className="fl-warn">{t('cs_off')} ({st.reason})</p>}
+      {st.status === 'ready' && (
+        <div className="fcmp-out">
+          <p className="fcmp-sum">
+            <i className="sw box" style={{ background: '#FFB020' }} /> <b>+{fmtNum(st.change.gainedKm2, lang)} km²</b> {t('cs_gained')}
+            <br />
+            <i className="sw box" style={{ background: '#5CE1FF' }} /> <b>−{fmtNum(st.change.lostKm2, lang)} km²</b> {t('cs_lost')}
+          </p>
+          {st.change.bbox && <button type="button" className="mini" onClick={() => frameArea(padBbox(st.change.bbox!, 0.15))}>⌖ {t('cmpf_frameAll')}</button>}
+          <ol className="fcmp-list">
+            {pieces(st.change.gained as number[][][][]).map((x, i) => (
+              <li key={i}>
+                <button type="button" className="rowbtn" style={{ borderLeftColor: '#FFB020' }} onClick={() => frameArea(padBbox(x.bbox, 0.8, 0.12))}>
+                  <span>{name(x.at) ? `${t('cmpf_near')} ${name(x.at)}` : t('cmpf_stretch')}</span>
+                  <small>+{fmtNum(x.km2, lang, x.km2 < 10 ? 1 : 0)} km²</small>
+                </button>
+              </li>
+            ))}
+          </ol>
+          <p className="note">{t('cs_note').replace('{d}', fmtDate(st.change.since, lang)).replace('{n}', fmtDate(st.change.now, lang))}</p>
+        </div>
+      )}
+      {!since && <p className="note">{t('cs_hint')}</p>}
+    </div>
+  );
+}
+
 export function UkraineExplorer() {
   const { t, lang } = useT();
   const meta = useStore((s) => s.frontline.set.meta);
@@ -196,6 +262,7 @@ export function UkraineExplorer() {
         </ul>
         <p className="note">{t('rx_noInfer')}</p>
       </Section>
+      {iswShown && <Section title={t('cs_title')}><ControlSince /></Section>}
       <Section title={t('cmpf_title')}><FrontCompare /></Section>
       <Section title={t('rx_sources')}>
         <div className="srclinks">

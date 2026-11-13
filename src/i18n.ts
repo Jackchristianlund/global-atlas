@@ -659,6 +659,13 @@ export const S = {
   ctl_iswUse: ['Brukt med tillatelse fra ISW, kun ikke-kommersielt.', 'Used with ISW’s permission, non-commercial only.'],
   ctl_iswCredit: ['Kontroll: ISW og AEIs Critical Threats Project (med tillatelse, ikke-kommersielt)', 'Control: ISW and AEI’s Critical Threats Project (with permission, non-commercial)'],
   ctl_pre: ['Okkupert før 24. februar 2022 (omriss)', 'Held before 24 February 2022 (outline)'],
+  cs_title: ['Kontroll over tid', 'Control over time'],
+  cs_since: ['Fra (ISWs arkiv)', 'From (ISW archive)'],
+  cs_gained: ['vurdert som russiskkontrollert nå, men ikke da', 'assessed as Russian-controlled now, but not then'],
+  cs_lost: ['vurdert som russiskkontrollert da, men ikke nå', 'assessed as Russian-controlled then, but not now'],
+  cs_off: ['Sammenligningen kunne ikke lages akkurat nå. Ingenting er tegnet.', 'The comparison could not be made just now. Nothing has been drawn.'],
+  cs_hint: ['ISWs åpne arkiv har én ren, datert serie for 2026: hver dag i mai. Velg en dag for å se hva som er endret siden.', 'ISW’s open archive has one clean, dated series for 2026: every day of May. Pick a day to see what has changed since.'],
+  cs_note: ['ISW/CTP {d} mot ISW/CTP {n}, begge forenklet til ~200 m; biter under 1 km² er utelatt. Det blå sier ikke hvorfor: det kan være ukrainsk framrykking eller at ISW har revidert en tidligere vurdering.', 'ISW/CTP {d} against ISW/CTP {n}, both generalised to ~200 m; pieces under 1 km² are left out. The blue does not say why: it can be a Ukrainian advance or ISW revising an earlier assessment.'],
   ctl_off: ['Kontrollområdene kunne ikke hentes akkurat nå. Ingenting er tegnet i stedet.', 'The areas of control could not be fetched just now. Nothing has been drawn in their place.'],
   sh_hint: ['Kopierer en lenke som åpner samme region, dato, zoom og kartlag.', 'Copies a link that opens the same region, date, zoom and layers.'],
 } satisfies Record<string, L>;

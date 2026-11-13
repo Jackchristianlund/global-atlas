@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { bundledFrontline, frontlinePaths, loadFrontline as loadFrontlineData, type FrontlineSet } from './lib/frontline';
 import { diffFronts, type FrontDiff, type LatLng as DiffLatLng } from './lib/frontDiff';
 import { loadControl as loadControlData, type ControlState } from './lib/control';
+import type { ChangeState } from './lib/controlHistory';
 import { conflictBbox, zoomForBbox } from './lib/territory';
 import { cachedMonth, loadMonth, monthDate, type HistoryMonth, type MonthState } from './lib/frontlineHistory';
 import type { ConflictType, Iso, Lang, LayerId, Selection, ViewId } from './types';
@@ -117,6 +118,10 @@ interface State {
   /** Labelled areas of control in Ukraine (lib/control.ts). */
   control: ControlState;
   loadControl: () => Promise<void>;
+  /** Control on a past day of ISW's archive, compared with now. */
+  controlSince: string | null;
+  controlChange: ChangeState;
+  setControlSince: (day: string | null) => void;
   /**
    * A request to frame an area, from anywhere in the interface: the map fits
    * it, the globe flies to it. `n` changes on every request so asking for the
@@ -259,6 +264,34 @@ export const useStore = create<State>((set, get) => ({
   frontCompareState: { status: 'idle' },
   linkedView: false,
   control: { status: 'idle' },
+  controlSince: null,
+  controlChange: { status: 'idle' },
+  setControlSince: (day) => {
+    if (!day) { set({ controlSince: null, controlChange: { status: 'idle' } }); return; }
+    set({ controlSince: day, controlChange: { status: 'loading' } });
+    void (async () => {
+      try {
+        await get().loadControl();
+        const c = get().control;
+        // Comparing ISW's archive with OCHA's older units would set two
+        // publishers' methods against each other: only ISW against ISW.
+        if (c.status !== 'ready' || c.layer.source !== 'isw') throw new Error('ISW current layer unavailable');
+        // The clipping library loads only when someone actually compares.
+        const { compareControl, loadArchiveDay } = await import('./lib/controlHistory');
+        const then = await loadArchiveDay(day);
+        // Clipping a few thousand vertices takes a moment; let the "loading"
+        // state paint first.
+        await new Promise((r) => setTimeout(r, 0));
+        const change = compareControl(c.layer.features.filter((f) => f.properties.kind === 'control'), then, day, c.layer.asOf);
+        if (get().controlSince !== day) return;
+        set({ controlChange: { status: 'ready', change } });
+        if (change.bbox) get().frameArea(change.bbox);
+      } catch (err) {
+        if (get().controlSince !== day) return;
+        set({ controlChange: { status: 'unavailable', reason: err instanceof Error ? err.message : 'unavailable' } });
+      }
+    })();
+  },
   loadControl: async () => {
     const st = get().control.status;
     if (st === 'loading' || st === 'ready') return;

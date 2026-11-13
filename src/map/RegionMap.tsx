@@ -89,6 +89,14 @@ function controlFC(): { type: 'FeatureCollection'; features: unknown[] } {
   return { type: 'FeatureCollection', features: c.status === 'ready' ? c.layer.features : [] };
 }
 
+/** The change in control since a past day, as two kinds of polygon. */
+function changeFC(): { type: 'FeatureCollection'; features: unknown[] } {
+  const c = useStore.getState().controlChange;
+  if (c.status !== 'ready') return { type: 'FeatureCollection', features: [] };
+  const f = (k: string, mp: unknown) => ({ type: 'Feature', properties: { k }, geometry: { type: 'MultiPolygon', coordinates: mp } });
+  return { type: 'FeatureCollection', features: [f('gained', c.change.gained), f('lost', c.change.lost)] };
+}
+
 /** What the map is drawn on: the bundled base, a vector style, or imagery. */
 type BaseKind = 'bundled' | 'vector' | 'imagery';
 
@@ -106,6 +114,7 @@ export default function RegionMap() {
   const monthState = useStore((st) => st.frontMonthState);
   const frame = useStore((st) => st.frame);
   const control = useStore((st) => st.control);
+  const controlChange = useStore((st) => st.controlChange);
   const loadControl = useStore((st) => st.loadControl);
   // As on the globe: ISW's layer is a few megabytes, fetched only once the
   // map is over Ukraine (or the war is selected), not for a look at Yemen.
@@ -213,6 +222,7 @@ export default function RegionMap() {
     (m.getSource('cmp') as maplibregl.GeoJSONSource | undefined)?.setData(compareFC(c?.a.segments ?? null, c?.b.segments ?? null) as never);
     (m.getSource('diff') as maplibregl.GeoJSONSource | undefined)?.setData(diffFC(c?.diff.stretches ?? []) as never);
     (m.getSource('ctl') as maplibregl.GeoJSONSource | undefined)?.setData(controlFC() as never);
+    (m.getSource('chg') as maplibregl.GeoJSONSource | undefined)?.setData(changeFC() as never);
     const ms = st.frontMonthState;
     (m.getSource('month') as maplibregl.GeoJSONSource | undefined)?.setData(monthFC(ms.status === 'ready' ? ms.line.segments : null) as never);
   }
@@ -232,6 +242,7 @@ export default function RegionMap() {
     src('terr', territoryFC(year));
     src('contact', contactFC(year, undefined, hideContact));
     src('ctl', controlFC());
+    src('chg', changeFC());
     src('routes', ROUTE_DATA);
     src('choke', chokepointFC(CHOKEPOINTS.map((c) => ({ id: c.id, name: c.name[lang === 'no' ? 0 : 1], at: c.at }))));
     src('yem-dist', DISTRICTS.lines);
@@ -309,6 +320,12 @@ export default function RegionMap() {
       layout: { 'line-join': 'round' },
       paint: { 'line-color': '#9E2A24', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.8, 10, 2], 'line-opacity': 0.9 },
     });
+    // Control over time: ground assessed as Russian-controlled now but not on
+    // the earlier day (amber), and the reverse (cyan, hatched by a dashed edge).
+    add({ id: 'chg-gain', type: 'fill', source: 'chg', filter: ['==', ['get', 'k'], 'gained'], paint: { 'fill-color': '#FFB020', 'fill-opacity': 0.7 } });
+    add({ id: 'chg-gain-line', type: 'line', source: 'chg', filter: ['==', ['get', 'k'], 'gained'], paint: { 'line-color': '#8A5A00', 'line-width': 1.2 } });
+    add({ id: 'chg-lost', type: 'fill', source: 'chg', filter: ['==', ['get', 'k'], 'lost'], paint: { 'fill-color': '#5CE1FF', 'fill-opacity': 0.55 } });
+    add({ id: 'chg-lost-line', type: 'line', source: 'chg', filter: ['==', ['get', 'k'], 'lost'], paint: { 'line-color': '#0E6C85', 'line-width': 1.2, 'line-dasharray': [2, 1.5] } });
     // Yemen's districts: thin and dashed, administrative reference only. They
     // are never filled and never coloured by actor, because no sourced
     // district-level assessment of control exists in this dataset.
@@ -471,7 +488,7 @@ export default function RegionMap() {
     if (m.getLayer('place-label')) vis('place-label', layers.fronts);
     vis('conflict-pt', layers.conflicts);
     vis('terr-sel', layers.territories);
-    for (const id of ['ctl-fill', 'ctl-line', 'ctl-adv', 'ctl-adv-line', 'ctl-inf', 'ctl-inf-line', 'ctl-pre']) vis(id, layers.territories);
+    for (const id of ['ctl-fill', 'ctl-line', 'ctl-adv', 'ctl-adv-line', 'ctl-inf', 'ctl-inf-line', 'ctl-pre', 'chg-gain', 'chg-gain-line', 'chg-lost', 'chg-lost-line']) vis(id, layers.territories);
     // Where labelled polygons are on the map, the oblast-level tint for
     // Ukraine would only paint the same claim twice, more coarsely.
     const ctlReady = useStore.getState().control.status === 'ready';
@@ -538,7 +555,7 @@ export default function RegionMap() {
     const retry = () => { pushHistory(m); paint(m); };
     m.once('idle', retry);
     return () => { m.off('idle', retry); };
-  }, [cmpState, monthState, control]);
+  }, [cmpState, monthState, control, controlChange]);
 
   // Frame an area someone asked for, leaving room for the floating panels.
   useEffect(() => {

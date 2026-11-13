@@ -49,6 +49,25 @@ Polygons are simplified to about 80 m in the browser (ISW's layer has about
 40,000 vertices), validated (extent, projection, plausible area) and never
 altered otherwise.
 
+## Control over time (ISW archive, May 2026)
+
+ISW's public ArcGIS organisation also holds older control layers. Only one of
+them is a clean, dated series for 2026: `May_CoT_view` — assessed Russian
+control for each day of May 2026, every feature with its `pub_date`
+(≈112,700 km² per day, consistent with the current layer). The other archive
+layers were checked on 13 November 2026 and are not used: their date fields
+hold edit timestamps rather than assessment dates, and several "merge" layers
+total over 3 million km², which cannot be control in Ukraine alone.
+
+The Ukraine explorer compares any day of May 2026 with ISW's current layer.
+Both are generalised to ~200 m and compared as polygons both ways
+(`src/lib/controlHistory.ts`, using the MIT-licensed polygon-clipping
+library): ground assessed as controlled now but not then (amber), and the
+reverse (cyan). Pieces under 1 km² are generalisation noise and are dropped.
+The interface says that the cyan can be a Ukrainian advance or a revised
+assessment; it does not say which. Same permission and same non-commercial
+switch as the current layer.
+
 ## Fallback: UN OCHA, HNRP 2026 planning units
 
 Used when the ISW layer is switched off, cannot be reached or fails
