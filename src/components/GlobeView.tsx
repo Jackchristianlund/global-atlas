@@ -505,12 +505,16 @@ export default function GlobeView() {
 
   const polyAlt = useCallback((f: object) => {
     if (isCtl(f)) return ctlKind(f) === 'control' ? 0.0172 : 0.0166;
-    if (isTerr(f)) return sel?.kind === 'territory' && sel.id === f.properties.id ? 0.019 : 0.015;
+    if (isTerr(f)) {
+      if (quiet(f)) return 0.007; // flat: an outline to click, not a slab
+      return sel?.kind === 'territory' && sel.id === f.properties.id ? 0.019 : 0.015;
+    }
     return tint.has((f as CountryFeature).properties.iso) ? 0.012 : 0.006;
-  }, [tint, sel]);
+  }, [tint, sel, quietUkr]);
 
   const stroke = useCallback((f: object) => {
     if (isCtl(f)) return ctlKind(f) === 'control' ? `rgba(255,150,140,${0.85 * layerOpacity.territories})` : `rgba(255,150,140,${0.4 * layerOpacity.territories})`;
+    if (isTerr(f) && quiet(f)) return `rgba(175,215,255,${0.35 * layerOpacity.territories})`;
     if (isTerr(f)) {
       // A brightened version of the actor's own colour rather than the colour
       // itself: a red edge on a red fill is no edge at all, and two neighbours
@@ -519,13 +523,15 @@ export default function GlobeView() {
       return lighten(a?.color ?? '#9FB3C8', 0.55, 0.88 * layerOpacity.territories);
     }
     return layers.borders ? `rgba(175,215,255,${0.42 * layerOpacity.borders})` : 'rgba(0,0,0,0)';
-  }, [layers.borders, layerOpacity.borders, layerOpacity.territories]);
+  }, [layers.borders, layerOpacity.borders, layerOpacity.territories, quietUkr]);
 
   // The raised edge of each zone. Dark rather than coloured, so the slab reads
   // as a thickness and not as a second, brighter band of the actor's colour.
+  // A unit that has stepped back for the control layer loses its slab too:
+  // dark walls around an empty cap read as a grey mosaic over the country.
   const sideColor = useCallback((f: object) => (
-    isCtl(f) || isTerr(f) ? `rgba(4,8,16,${0.5 * layerOpacity.territories})` : 'rgba(0,0,0,0)'
-  ), [layerOpacity.territories]);
+    isCtl(f) || (isTerr(f) && !quiet(f)) ? `rgba(4,8,16,${0.5 * layerOpacity.territories})` : 'rgba(0,0,0,0)'
+  ), [layerOpacity.territories, quietUkr]);
 
   const polyLabel = useCallback((f: object) => {
     if (isCtl(f)) {
