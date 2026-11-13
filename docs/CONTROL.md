@@ -121,3 +121,21 @@ found that is both machine-readable and licensed for this use:
 Recommended: ask ISW/CTP whether the existing permission extends to CTP's
 Sudan control data.
 
+**Update, 14 November 2026.** ISW confirmed that CTP's Sudan control maps may
+be used non-commercially (keep the email with the Ukraine permission). Nothing
+is drawn yet, because there is nothing machine-readable to draw:
+
+- ISW/CTP's public ArcGIS organisation (services5.arcgis.com/SaBe5HMtmnbqSWlu,
+  326 services) has no Sudan control layer; the only Sudan-related item is a
+  Nile River line. A search of public ArcGIS Online items for Sudan control
+  of terrain found nothing from CTP either.
+- CTP's Sudan maps in the Africa File are published as images, and their
+  source line credits Thomas van Linge and Vista Maps alongside CTP. Tracing
+  an image would make the geometry ours rather than the source's, and the
+  permission may not cover van Linge's and Vista Maps' part.
+
+Next step: ask ISW/CTP for the underlying GIS file (GeoJSON, shapefile or a
+feature layer) of the Sudan control map, and whether van Linge's and Vista
+Maps' contribution is covered. With a file, `lib/control.ts` can load it the
+same way as Ukraine, under the same COMMERCIAL guard.
+
