@@ -284,7 +284,9 @@ export default function RegionMap() {
     if (mmrMod) { put(mmrMod); return; }
     const b = m.getBounds();
     const over = b.getWest() < MMR_AREA[2] && b.getEast() > MMR_AREA[0] && b.getSouth() < MMR_AREA[3] && b.getNorth() > MMR_AREA[1];
-    if (over) void loadMmr().then((mod) => { try { put(mod); } catch { /* map gone */ } });
+    // At world scale the townships are specks; they load once the reader is
+    // close enough to see them.
+    if (over && m.getZoom() >= 3) void loadMmr().then((mod) => { try { put(mod); } catch { /* map gone */ } });
   }
 
   /** Sources and layers, in the order they must stack. */

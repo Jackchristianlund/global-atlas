@@ -305,6 +305,26 @@ measured reliably in the automated browser, which throttles background tabs.
   established". Phone check at 390 px: no sideways scrolling, the image
   button fits the view-switch row.
 
+## Speed, accessibility, share previews, monthly ship update (14 November 2026)
+
+- **Detailed map.** The map chunk is 431 KB compressed, down from 1,208 KB.
+  The bundled base detail (≈500 KB) loads just after the map opens and fills
+  in; Myanmar's townships (≈250 KB) load once the map is over Myanmar at
+  zoom 3 or closer, into placeholder layers that keep their stack position.
+- **Accessibility.** axe-core finds no violations in the view switch, the
+  Ukraine panel or the Yemen panel. Heading order fixed; the May replay
+  announces start and end rather than every day; image-export failure is
+  announced to screen readers.
+- **Share previews.** Twelve conflicts have a share page at `c/<id>/` with
+  their own title, description and 1200×630 image (`public/og/`, made by
+  `scripts/build-og.mjs`); the share button uses it when a conflict is
+  selected, and the page passes the sharer's view on in the hash.
+- **Monthly ship-attack update.** A scheduled task on the owner's account
+  ("Skipsangrep i Global Atlas", the 3rd of each month, 14:37 Oslo time)
+  looks for new confirmed attacks on merchant ships, adds them under the same
+  rules, runs the tests and publishes.
+- **Repo.** One-off probe and screenshot scripts removed; README rewritten.
+
 ## Data sources and licensing
 
 | Source | Use | Licence / access | Status |
