@@ -1174,3 +1174,8 @@ ul.cmplist li { display: flex; flex-direction: column; gap: 2px; border-left: 2p
 .vs-close { position: absolute; top: 6px; right: 6px; padding: 1px 6px; }
 .vs-stylebtn { padding: 6px 10px; color: var(--dim); font: 600 11px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 .vs-stylebtn:hover { color: var(--text); }
+
+/* The closed drawers sit just off the right edge. Without a clip on the
+   document itself a phone could drag the page sideways and find them. */
+html, body { overflow-x: hidden; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } }

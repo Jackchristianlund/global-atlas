@@ -116,6 +116,9 @@ const DENSE: Record<string, LatLng[]> = Object.fromEntries(
   ALL_ROUTES.map((r) => [r.id, densify(routePoints(r), isComputed(r.id) ? 120 : r.kind === 'pipeline' || r.kind === 'rail' ? 400 : 220)]),
 );
 
+/** Where the camera rests: the Middle East and Europe, with Ukraine and Yemen in view. */
+const REST = { lat: 36, lng: 33 };
+
 export default function GlobeView() {
   const s = useStore();
   const compareYear = useStore((x) => x.compareYear);
@@ -252,7 +255,7 @@ export default function GlobeView() {
     // Centred so the active fronts are all legible on arrival rather than
     // squashed against the limb: Ukraine sits in the upper third, with the
     // Middle East, the Sahel and the Horn still square to the camera.
-    const rest = { lat: 36, lng: 33, altitude: restAlt.current };
+    const rest = { ...REST, altitude: restAlt.current };
     const linked = useStore.getState().linkedView;
     if (linked) {
       // A shared link: its camera wins over the entrance and over the
@@ -341,8 +344,14 @@ export default function GlobeView() {
   useEffect(() => {
     const g = globe.current;
     if (!g || !ready || interacted.current || useStore.getState().sel) return;
+    // To the resting view itself, not the current one: a resize that lands
+    // during the entrance (a phone's address bar folding away does exactly
+    // that) would otherwise cut the flight short and leave the camera over
+    // 0°/0°, where the entrance starts.
     const pov = g.pointOfView();
-    if (Math.abs(pov.altitude - restAlt.current) > 0.04) g.pointOfView({ lat: pov.lat, lng: pov.lng, altitude: restAlt.current }, 500);
+    if (Math.abs(pov.altitude - restAlt.current) > 0.04 || Math.abs(pov.lat - REST.lat) > 0.5 || Math.abs(pov.lng - REST.lng) > 0.5) {
+      g.pointOfView({ ...REST, altitude: restAlt.current }, 500);
+    }
   }, [size.w, size.h, ready, insets]);
 
   useEffect(() => {
