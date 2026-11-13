@@ -213,7 +213,9 @@ function ControlSince() {
         </button>
       </div>
       {playing && (
-        <div className="mp-day" role="status" aria-live="polite">
+        // The day changes every 650 ms: announcing each would drown the
+        // reader, so the day is shown, and only start and end are spoken.
+        <div className="mp-day" aria-hidden="true">
           <b>{fmtDate(playing, lang)}</b>
           <span className="mp-track"><span style={{ width: `${((ARCHIVE_DAYS.indexOf(playing) + 1) / ARCHIVE_DAYS.length) * 100}%` }} /></span>
         </div>
@@ -241,6 +243,7 @@ function ControlSince() {
           <p className="note">{t('cs_note').replace('{d}', fmtDate(st.change.since, lang)).replace('{n}', fmtDate(st.change.now, lang))}</p>
         </div>
       )}
+      <span className="sr-only" role="status">{playing ? t('mp_started') : replay ? t('mp_done').replace('{n}', fmtDate(st.change.now, lang)) : ''}</span>
       {!since && !playing && st.status !== 'ready' && <p className="note">{t('cs_hint')}</p>}
       <p className="note">{t('mp_note')}</p>
     </div>

@@ -662,6 +662,8 @@ export const S = {
   ry_jmicTotal: ['hendelser, nov. 2023–jan. 2026', 'incidents, Nov 2023 – Jan 2026'],
   ry_jmicNote: ['Talt fra datoene i JMICs liste for Rødehavet, Adenbukta og Indiahavet. Listen har alle hendelsestyper, ikke bare angrep, og ingen posisjoner; derfor tall og ikke punkter. Den slutter i januar 2026, så angrepene i 2026 står bare i listen under. Kilde:', 'Counted from the dates in JMIC’s list for the Red Sea, Gulf of Aden and Indian Ocean. The list holds every incident type, not only attacks, and no positions; hence counts rather than points. It ends in January 2026, so the 2026 attacks appear only in the list below. Source:'],
   mp_play: ['Spill av mai dag for dag', 'Play May day by day'],
+  mp_started: ['Avspilling av mai startet.', 'May replay started.'],
+  mp_done: ['Avspillingen viser {n} mot 1. mai.', 'The replay shows {n} against 1 May.'],
   mp_stop: ['Stopp', 'Stop'],
   mp_gained: ['vurdert som russiskkontrollert {n}, men ikke 1. mai', 'assessed as Russian-held on {n}, but not on 1 May'],
   mp_lost: ['vurdert som russiskkontrollert 1. mai, men ikke {n}', 'assessed as Russian-held on 1 May, but not on {n}'],

@@ -72,11 +72,11 @@ function Links({ items }: { items: ImpactLink[] }) {
         if (!of.length) return null;
         return (
           <div className={`effgroup o-${kind}`} key={kind}>
-            <h5>
+            <h4>
               <span className={`badge o-${kind}`}>{t(`o_${kind}`)}</span>
               <span className="eff-what">{t(`eff_${kind}`)}</span>
               <span className="eff-n">{of.length}</span>
-            </h5>
+            </h4>
             <ul className="links">{of.map((l) => <LinkCard key={l.id} l={l} />)}</ul>
           </div>
         );

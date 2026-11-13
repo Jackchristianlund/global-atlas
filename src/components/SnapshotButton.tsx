@@ -95,15 +95,19 @@ export default function SnapshotButton() {
   };
 
   return (
-    <button
-      type="button"
-      className="vs-snap"
-      onClick={() => void run()}
-      disabled={busy}
-      title={failed ? t('snap_fail') : t('snap_btn')}
-      aria-label={t('snap_btn')}
-    >
-      {busy ? t('snap_busy') : failed ? `⚠ ${t('snap_btn')}` : `⤓ ${t('snap_btn')}`}
-    </button>
+    <>
+      <button
+        type="button"
+        className="vs-snap"
+        onClick={() => void run()}
+        aria-disabled={busy}
+        aria-busy={busy}
+        title={failed ? t('snap_fail') : t('snap_btn')}
+      >
+        <span aria-hidden="true">{busy ? '…' : failed ? '⚠' : '⤓'} </span>{busy ? t('snap_busy') : t('snap_btn')}
+      </button>
+      {/* Said once, to screen readers too: a disabled-looking button alone does not explain itself. */}
+      <span className="sr-only" role="status">{failed ? t('snap_fail') : ''}</span>
+    </>
   );
 }
