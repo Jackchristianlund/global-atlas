@@ -1179,3 +1179,15 @@ ul.cmplist li { display: flex; flex-direction: column; gap: 2px; border-left: 2p
    document itself a phone could drag the page sideways and find them. */
 html, body { overflow-x: hidden; }
 @supports (overflow: clip) { html, body { overflow-x: clip; } }
+
+/* Credits on a phone: one line across the bottom of the map, the full text
+   on a tap. The desktop rule above placed it beside a sidebar that a phone
+   does not have, which squeezed it into a tall column over the map. */
+@media (max-width: 880px) {
+  .mapattr {
+    left: 10px; right: 10px; bottom: 40px; max-width: none;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    pointer-events: auto; cursor: pointer;
+  }
+  .mapattr:focus, .mapattr:hover { white-space: normal; }
+}

@@ -649,7 +649,7 @@ export default function RegionMap() {
         </div>
       )}
       {/* Every source actually on the map is credited, and nothing that is not. */}
-      <p className="mapattr">
+      <p className="mapattr" tabIndex={0}>
         {base === 'bundled' || mapStyle === 'satellite' ? DETAIL_META.attribution : ''}
         {base !== 'bundled' && def.attribution ? `${mapStyle === 'satellite' ? ' \u00b7 ' : ''}${def.attribution}` : ''}
         {imagery ? ` \u00b7 ${imagery.attribution}` : ''}
