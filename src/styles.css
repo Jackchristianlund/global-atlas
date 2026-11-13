@@ -1191,3 +1191,8 @@ html, body { overflow-x: hidden; }
   }
   .mapattr:focus, .mapattr:hover { white-space: normal; }
 }
+
+/* While the globe's code is still arriving: the same dark sky, and a quiet word. */
+.globeloading { position: absolute; inset: 0; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 50%, rgba(0,217,255,.07), transparent 45%), #05080F; }
+.globeloading span { font: 600 11px var(--display); letter-spacing: .18em; text-transform: uppercase; color: var(--dim); }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Suspense, lazy, useMemo } from 'react';
 import {
   ALL_ROUTES, CHOKEPOINT, CHOKEPOINTS, CONFLICT, CONFLICTS, COUNTRY_CODES, DISPUTED, EVENTS, LINKS, ORG, ORGS, RELATIONS, REL_COLOR, ROUTE, SANCTIONS, SITE, countryName,
 } from '../data';
@@ -19,7 +19,8 @@ import PlacePanel from './PlacePanel';
 import { Ad } from './Commerce';
 import { CompareSection, ContactSection } from './TerritoryPanel';
 import Recent from './Recent';
-import ScenarioLab from './ScenarioLab';
+/** The scenario lab is one view of seven; it loads when that view is chosen. */
+const ScenarioLab = lazy(() => import('./ScenarioLab'));
 import { UkraineExplorer, YemenExplorer } from './RegionExplorer';
 
 const CATS: ClaimCat[] = ['escalation', 'ceasefire', 'military', 'human', 'geo', 'econ'];
@@ -449,7 +450,7 @@ export default function RightPanel() {
   else if (sel?.kind === 'flow') body = <FlowPanel id={sel.id} />;
   else if (sel?.kind === 'attack') body = <AttackPanel id={sel.id} />;
   else if (sel?.kind === 'place') body = <PlacePanel id={sel.id} />;
-  else body = view === 'scenario' ? <ScenarioLab />
+  else body = view === 'scenario' ? <Suspense fallback={null}><ScenarioLab /></Suspense>
     : view === 'human' ? <><Dashboard /><DisplacementOverview /></>
     : view === 'conflict' ? <><Dashboard /><Recent /></>
     : <Dashboard />;

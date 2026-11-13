@@ -46,7 +46,7 @@ const ODBL: L = [
   'OpenStreetMap data under ODbL 1.0. Commercial use is permitted as long as the source is credited.',
 ];
 
-import { GLYPHS_URL } from './glyphs';
+import { GLYPHS_URL } from './glyphsUrl';
 
 /**
  * Shaded relief from Mapzen's Terrain Tiles on AWS Open Data.

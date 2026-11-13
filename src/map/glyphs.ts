@@ -13,8 +13,7 @@
  */
 import { GLYPHS } from '../data/detail/glyphs';
 
-/** The scheme is a sentinel: nothing ever tries to resolve it over the network. */
-export const GLYPHS_URL = 'ga-glyphs://{fontstack}/{range}.pbf';
+export { GLYPHS_URL } from './glyphsUrl';
 
 const blobs = new Map<string, string>();
 
