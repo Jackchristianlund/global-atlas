@@ -16,6 +16,7 @@ import { traceLinks } from '../lib/trace';
 import { buildHydro, setHydroOpacity } from '../lib/hydro';
 import { buildFrontMesh, type FrontMesh } from '../lib/frontmesh';
 import { globeOffset, panelInsets, restAltitude } from '../lib/framing';
+import { coarsen } from '../lib/control';
 import { derivedContactHidden } from '../map/overlays';
 import { REGION_FOR_CONFLICT, belligerentColors, changedUnits, contactLines, frontsOfRegion, lighten, placesOfRegion, regionsWithData, territoryById, territoryFeatures, unitFill, type TerritoryFeature } from '../lib/territory';
 import { ACTOR, REGION } from '../data/territory';
@@ -468,11 +469,28 @@ export default function GlobeView() {
 
   // Territory polygons sit just above the country layer; the markers float above both.
   const territories = useMemo(() => (layers.territories ? territoryFeatures(year) : []), [layers.territories, year]);
-  const polygons = useMemo(() => [...(world ?? []), ...territories], [world, territories]);
+  // Labelled areas of control (ISW/CTP, or OCHA as fallback), coarsened for
+  // the globe. Drawn for the year the source describes only.
+  const control = useStore((st) => st.control);
+  const ctlPolys = useMemo(() => {
+    if (!layers.territories || year !== SNAPSHOT_YEAR || control.status !== 'ready') return [];
+    return coarsen(control.layer.features, 0.01).map((f) => ({ ...f, properties: { kind: 'ctl', ctl: f.properties.kind } }));
+  }, [layers.territories, year, control]);
+  const polygons = useMemo(() => [...(world ?? []), ...territories, ...ctlPolys], [world, territories, ctlPolys]);
   const isTerr = (f: object): f is TerritoryFeature => (f as TerritoryFeature).properties.kind === 'territory';
+  const isCtl = (f: object) => (f as { properties: { kind?: string } }).properties.kind === 'ctl';
+  const ctlKind = (f: object) => (f as { properties: { ctl: string } }).properties.ctl;
+  // As on the map: where labelled control is drawn, Ukraine's partly held and
+  // government-held units step back to a trace instead of painting the same
+  // claim twice; units wholly assessed as occupied, such as Crimea, keep theirs.
+  const quietUkr = ctlPolys.length > 0;
+  const quiet = (f: TerritoryFeature) => quietUkr && f.properties.region === 'ukraine'
+    && (f.properties.record.status !== 'control' || f.properties.record.actor === 'ua-gov');
 
   const capColor = useCallback((f: object) => {
+    if (isCtl(f)) return ctlKind(f) === 'control' ? `rgba(214,69,61,${0.62 * layerOpacity.territories})` : `rgba(227,93,85,${0.26 * layerOpacity.territories})`;
     if (isTerr(f)) {
+      if (quiet(f)) return 'rgba(0,0,0,0)';
       const { record, id } = f.properties;
       const on = sel?.kind === 'territory' && sel.id === id;
       const actorOn = sel?.kind === 'actor' && (sel.id === record.actor || sel.id === record.with);
@@ -483,14 +501,16 @@ export default function GlobeView() {
     }
     const code = (f as CountryFeature).properties.iso;
     return tint.get(code) ?? (hover === code ? 'rgba(0,217,255,0.16)' : 'rgba(120,170,230,0.03)');
-  }, [tint, hover, sel, layerOpacity.territories]);
+  }, [tint, hover, sel, layerOpacity.territories, quietUkr]);
 
   const polyAlt = useCallback((f: object) => {
+    if (isCtl(f)) return ctlKind(f) === 'control' ? 0.0172 : 0.0166;
     if (isTerr(f)) return sel?.kind === 'territory' && sel.id === f.properties.id ? 0.019 : 0.015;
     return tint.has((f as CountryFeature).properties.iso) ? 0.012 : 0.006;
   }, [tint, sel]);
 
   const stroke = useCallback((f: object) => {
+    if (isCtl(f)) return ctlKind(f) === 'control' ? `rgba(255,150,140,${0.85 * layerOpacity.territories})` : `rgba(255,150,140,${0.4 * layerOpacity.territories})`;
     if (isTerr(f)) {
       // A brightened version of the actor's own colour rather than the colour
       // itself: a red edge on a red fill is no edge at all, and two neighbours
@@ -504,10 +524,17 @@ export default function GlobeView() {
   // The raised edge of each zone. Dark rather than coloured, so the slab reads
   // as a thickness and not as a second, brighter band of the actor's colour.
   const sideColor = useCallback((f: object) => (
-    isTerr(f) ? `rgba(4,8,16,${0.5 * layerOpacity.territories})` : 'rgba(0,0,0,0)'
+    isCtl(f) || isTerr(f) ? `rgba(4,8,16,${0.5 * layerOpacity.territories})` : 'rgba(0,0,0,0)'
   ), [layerOpacity.territories]);
 
   const polyLabel = useCallback((f: object) => {
+    if (isCtl(f)) {
+      const c = useStore.getState().control;
+      if (c.status !== 'ready') return '';
+      const src = c.layer.source === 'isw' ? 'ISW / CTP' : 'UN OCHA, HNRP 2026';
+      const what = ctlKind(f) === 'control' ? tr('ctl_title', lang) : tr('ctl_adv', lang);
+      return `<div class="tip"><b>${esc(what)}</b><br><small>${esc(src)} \u00b7 ${esc(fmtDate(c.layer.asOf, lang))}</small></div>`;
+    }
     if (isTerr(f)) {
       const { record, unitName } = f.properties;
       const a = ACTOR[record.actor];
@@ -768,6 +795,17 @@ export default function GlobeView() {
   // A request to frame an area, from the comparison, the region explorers or
   // the search: fly to its centre at a height that shows all of it.
   const frame = useStore((st) => st.frame);
+
+  // The control layer is a few megabytes from ISW, so the globe asks for it
+  // only once the reader is looking at Ukraine: close in over it, or with the
+  // war selected. The overview at rest does not pay for it.
+  const loadControl = useStore((st) => st.loadControl);
+  const nearUkraine = useStore((st) => {
+    const v = st.globeView;
+    return (st.sel?.kind === 'conflict' && st.sel.id === 'ukr')
+      || (v.altitude < 1.4 && Math.abs(v.lat - 48.5) < 10 && Math.abs(v.lng - 32) < 16);
+  });
+  useEffect(() => { if (nearUkraine && layers.territories) void loadControl(); }, [nearUkraine, layers.territories, loadControl]);
   useEffect(() => {
     const g = globe.current;
     if (!g || !ready || !frame || useStore.getState().mapMode !== 'globe') return;

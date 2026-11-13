@@ -124,3 +124,14 @@ describe('labelled areas of control', () => {
     expect(asked).toHaveLength(2);
   });
 });
+
+describe('naming a changed stretch', () => {
+  it('uses the nearest city, and names nothing when none is close', async () => {
+    const { nearestPlace } = await import('../src/components/RegionExplorer');
+    const stretch = (lat: number, lng: number) => ({ path: [[lat, lng], [lat + 0.01, lng]] as [number, number][], maxKm: 5, lengthKm: 1, of: 'b' as const, bbox: [lng, lat, lng, lat + 0.01] as [number, number, number, number] });
+    // Kupiansk is about 100 km from Kharkiv: named for Kupiansk once the city list is in.
+    expect(nearestPlace(stretch(49.71, 37.61), [['Kupyansk', 49.71, 37.62]])?.name).toBe('Kupyansk');
+    // In the middle of nowhere: no name, rather than a misleading one.
+    expect(nearestPlace(stretch(45.0, 25.0), [])).toBeNull();
+  });
+});

@@ -219,3 +219,24 @@ export async function loadControl(fetchImpl: typeof fetch = fetch, env?: Record<
   catch (err) { reasons.push(err instanceof Error ? err.message : 'unreachable'); }
   return { status: 'unavailable', reason: reasons.join('; ') };
 }
+
+/**
+ * A coarser copy for the globe. At globe distance a kilometre is a fraction
+ * of a pixel, and three-globe triangulates every vertex into a raised slab,
+ * so the map's ~80 m detail would cost frames for nothing. Rings that vanish
+ * at this tolerance are dropped; holes stay with their ring.
+ */
+export function coarsen(features: GeoJsonFeature[], tolerance: number, kinds: ControlKind[] = ['control', 'advance']): GeoJsonFeature[] {
+  const ring = (r: number[][]) => simplifyPath(r as [number, number][], tolerance);
+  const out: GeoJsonFeature[] = [];
+  for (const f of features) {
+    if (!kinds.includes(f.properties.kind as ControlKind)) continue;
+    const g = f.geometry;
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+    const kept = polys
+      .map((p) => p.map(ring).filter((r) => r.length >= 4))
+      .filter((p) => p.length > 0 && p[0].length >= 4);
+    if (kept.length) out.push({ ...f, geometry: { type: 'MultiPolygon', coordinates: kept } });
+  }
+  return out;
+}

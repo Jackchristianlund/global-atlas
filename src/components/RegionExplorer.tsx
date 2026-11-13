@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ATTACKS } from '../data/attacks';
 import { EVENTS, EVENT_COLOR } from '../data';
 import { ACTOR, ACTORS, PLACES } from '../data/territory';
@@ -38,16 +38,36 @@ function SrcLink({ id, label }: { id: string; label?: string }) {
 const MONTH_FMT = (m: HistoryMonth, lang: 'no' | 'en') =>
   new Intl.DateTimeFormat(lang === 'no' ? 'nb-NO' : 'en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(monthDate(m) + 'T12:00:00Z'));
 
-/** The nearest curated Ukrainian place to a stretch, for naming it. */
-function nearestPlace(s: ChangedStretch): { name: string; km: number } | null {
+/** A place to name a stretch by: [name, lat, lng]. */
+type Named = [string, number, number];
+
+/** The curated Ukrainian places, always available. */
+const CURATED: Named[] = PLACES.filter((p) => p.region === 'ukraine').map((p) => [p.name, p.at[0], p.at[1]]);
+
+let ukrCities: Named[] | null = null;
+/**
+ * Ukrainian cities from the bundled gazetteer (Natural Earth), loaded the
+ * first time a comparison is shown. Sixteen curated places alone named a
+ * stretch at Kupiansk "near Kharkiv"; with these it is named for Kupiansk.
+ */
+function loadUkrCities(): Promise<Named[]> {
+  if (ukrCities) return Promise.resolve(ukrCities);
+  return import('../data/gazetteer.json').then((m) => {
+    const rows = m.default as unknown as [string, number, number, string, number][];
+    ukrCities = rows.filter((r) => r[3] === 'UA').map((r) => [r[0], r[1], r[2]] as Named);
+    return ukrCities;
+  });
+}
+
+/** The nearest named place to the middle of a stretch, within 60 km. */
+export function nearestPlace(s: ChangedStretch, extra: Named[] = []): { name: string; km: number } | null {
   const mid = s.path[Math.floor(s.path.length / 2)];
   let best: { name: string; km: number } | null = null;
-  for (const p of PLACES) {
-    if (p.region !== 'ukraine') continue;
-    const d = km(mid, p.at);
-    if (!best || d < best.km) best = { name: p.name, km: d };
+  for (const [name, lat, lng] of [...CURATED, ...extra]) {
+    const d = km(mid, [lat, lng]);
+    if (!best || d < best.km) best = { name, km: d };
   }
-  return best && best.km < 90 ? best : null;
+  return best && best.km < 60 ? best : null;
 }
 
 function FrontCompare() {
@@ -64,6 +84,8 @@ function FrontCompare() {
     { v: 'now', label: `${t('cmpf_now')} (${fmtDate(current, lang)})` },
   ];
   const parse = (v: string): CompareKey => (v === 'now' ? 'now' : (Number(v) as HistoryMonth));
+  const [cities, setCities] = useState<Named[]>(ukrCities ?? []);
+  useEffect(() => { if (st.status === 'ready' && !cities.length) void loadUkrCities().then(setCities); }, [st.status, cities.length]);
   const run = (na: CompareKey, nb: CompareKey) => setPair({ a: na, b: nb });
 
   return (
@@ -102,7 +124,7 @@ function FrontCompare() {
               <button type="button" className="mini" onClick={() => st.diff.bbox && frameArea(padBbox(st.diff.bbox, 0.15))}>⌖ {t('cmpf_frameAll')}</button>
               <ol className="fcmp-list">
                 {st.diff.stretches.filter((x) => x.of === 'b').slice(0, 6).map((x, i) => {
-                  const near = nearestPlace(x);
+                  const near = nearestPlace(x, cities);
                   return (
                     <li key={i}>
                       <button type="button" className="rowbtn" onClick={() => frameArea(padBbox(x.bbox, 0.6, 0.15))}>
