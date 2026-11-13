@@ -11,7 +11,24 @@ import { SNAPSHOT_YEAR, useStore } from '../store';
 import { useT } from '../i18n';
 import { DEM, MAP_STYLES, adapterStyle, altitudeToZoom, enhanceStyle, fallbackStyle, imageryProvider, loadStyle, webgl2Available, withRelief, zoomToAltitude, type MapStyleId } from './styles';
 import { addBaseDetail, addBaseLabels, DETAIL_META, setBaseDetailVisible } from './basedetail';
-import { addMmrLayers, addMmrSiteLabels, bindMmrPopup, MMR_SITE_LAYERS, mmrLayerIds } from './mmrlayers';
+// Myanmar's township layers (and their 250 KB of geometry) load only when the
+// map is over Myanmar; until then two empty placeholder layers hold their
+// place in the stack.
+type MmrModule = typeof import('./mmrlayers');
+let mmrMod: MmrModule | null = null;
+let mmrLoading: Promise<MmrModule> | null = null;
+const loadMmr = () => (mmrLoading ??= import('./mmrlayers').then((mod) => (mmrMod = mod)));
+const MMR_AREA: [number, number, number, number] = [91.5, 9, 102, 29];
+/** An empty, invisible layer that marks where a late-loading group goes. */
+function slot(m: MLMap, id: string) {
+  if (!m.getLayer(id)) m.addLayer({ id, type: 'background', layout: { visibility: 'none' }, paint: { 'background-opacity': 0 } });
+}
+/** The layer directly above a slot: late layers are inserted under it, in order. */
+function above(m: MLMap, id: string): string | undefined {
+  const ls = m.getStyle().layers ?? [];
+  const i = ls.findIndex((l) => l.id === id);
+  return i >= 0 ? ls[i + 1]?.id : undefined;
+}
 import { loadWorld, type CountryFeature } from '../data/countries';
 import { resolveGlyphRequest } from './glyphs';
 import { LABEL_MIN_ZOOM, attackFC, belligerentFC, chokepointFC, compareFC, conflictFC, contactFC, derivedContactHidden, diffFC, districtFC, frontlineFC, monthFC, placeFC, routesFC, sitesFC, territoryFC, type LabelDensity } from './overlays';
@@ -124,6 +141,8 @@ export default function RegionMap() {
     || (st.mapView.lat > 43 && st.mapView.lat < 54 && st.mapView.lng > 20 && st.mapView.lng < 42));
   useEffect(() => { if (overUkraine) void loadControl(); }, [overUkraine, loadControl]);
   const bound = useRef(false);
+  const mmrBound = useRef(false);
+  const paintRef = useRef<((m: MLMap) => void) | null>(null);
   const { t, lang } = useT();
   const s = useStore();
   const { year, layers, layerOpacity, mapStyle, labelDensity, mapView, setMapView, select, frontline, sel } = s;
@@ -211,6 +230,9 @@ export default function RegionMap() {
         ?.setData(belligerentFC(viewBounds(m), world.current, conflictRef.current) as never);
     };
     m.on('moveend', onMove);
+    // Myanmar's layers come in the first time the map is over Myanmar.
+    const onMoveMmr = () => { if (!mmrMod && m.getLayer('mmr-slot')) installMmr(m); };
+    m.on('moveend', onMoveMmr);
 
     // Country outlines arrive after the map; refresh the source when they do.
     let live = true;
@@ -224,6 +246,7 @@ export default function RegionMap() {
       live = false;
       registerCapture('map', null);
       m.off('moveend', onMove);
+      m.off('moveend', onMoveMmr);
       m.remove();
       map.current = null;
       // Drop the inspection handle too: holding a removed map keeps its canvas
@@ -246,6 +269,24 @@ export default function RegionMap() {
     (m.getSource('month') as maplibregl.GeoJSONSource | undefined)?.setData(monthFC(ms.status === 'ready' ? ms.line.segments : null) as never);
   }
 
+  /**
+   * Puts Myanmar's layers into their slots once the module is here, loading
+   * it the first time the map is over Myanmar.
+   */
+  function installMmr(m: MLMap) {
+    const put = (mod: MmrModule) => {
+      if (!m.getLayer('mmr-slot') || m.getSource('mmr-mesh')) return;
+      mod.addMmrLayers(m, above(m, 'mmr-slot'));
+      mod.addMmrSiteLabels(m, langRef.current, above(m, 'mmr-label-slot'));
+      if (!mmrBound.current) { mmrBound.current = true; mod.bindMmrPopup(m, () => langRef.current); }
+      paintRef.current?.(m);
+    };
+    if (mmrMod) { put(mmrMod); return; }
+    const b = m.getBounds();
+    const over = b.getWest() < MMR_AREA[2] && b.getEast() > MMR_AREA[0] && b.getSouth() < MMR_AREA[3] && b.getNorth() > MMR_AREA[1];
+    if (over) void loadMmr().then((mod) => { try { put(mod); } catch { /* map gone */ } });
+  }
+
   /** Sources and layers, in the order they must stack. */
   function addOverlays(m: MLMap) {
     // The bundled base goes in first, so every conflict layer added below
@@ -254,7 +295,7 @@ export default function RegionMap() {
     // Myanmar's townships sit directly on the base map: they are the lowest
     // overlay, so the front line, markers and labels all stay readable over
     // them. They draw only where Myanmar is, so other regions are unaffected.
-    addMmrLayers(m);
+    slot(m, 'mmr-slot');
 
     const src = (id: string, data: unknown) => { if (!m.getSource(id)) m.addSource(id, { type: 'geojson', data: data as never }); };
     src('belligerent', belligerentFC(viewBounds(m), world.current, conflictRef.current));
@@ -406,7 +447,8 @@ export default function RegionMap() {
     // Settlement names go on after the conflict layers, so a city label is
     // never hidden under a control polygon.
     addBaseLabels(m, true);
-    addMmrSiteLabels(m, lang);
+    slot(m, 'mmr-label-slot');
+    installMmr(m);
 
     add({
       id: 'attack-pt', type: 'circle', source: 'attacks',
@@ -473,7 +515,7 @@ export default function RegionMap() {
     // Myanmar answers in a popup rather than the side panel: the claim being
     // made is about one township, and about 270 of the 330 carry no claim at
     // all. The popup says which of the two the reader just clicked.
-    bindMmrPopup(m, () => langRef.current);
+    // (Myanmar's popup is bound when its layers are installed.)
     for (const [layer, kind] of [['attack-pt', 'attack'], ['place-pt', 'place'], ['conflict-pt', 'conflict'], ['choke-pt', 'chokepoint'], ['terr-fill', 'territory']] as const) {
       m.on('click', layer, (e) => {
         const f = e.features?.[0];
@@ -486,6 +528,7 @@ export default function RegionMap() {
   }
 
   /** Visibility and opacity, driven by the same layer controls as the globe. */
+  paintRef.current = (m: MLMap) => paint(m);
   function paint(m: MLMap) {
     // The layers being present is what matters. isStyleLoaded() also waits for
     // every tile source, so on a busy map (relief, imagery) it can stay false
@@ -497,8 +540,8 @@ export default function RegionMap() {
     // Myanmar's townships answer the same question as the control layer, so
     // they follow the same switch. The two named sites are impact, not
     // control, and follow the impact switch instead.
-    for (const id of mmrLayerIds()) if (m.getLayer(id)) vis(id, layers.territories);
-    for (const id of MMR_SITE_LAYERS) if (m.getLayer(id)) vis(id, layers.links);
+    for (const id of mmrMod?.mmrLayerIds() ?? []) if (m.getLayer(id)) vis(id, layers.territories);
+    for (const id of mmrMod?.MMR_SITE_LAYERS ?? []) if (m.getLayer(id)) vis(id, layers.links);
     vis('contact-line', layers.fronts);
     vis('frontline-case', layers.sourceline);
     vis('frontline-line', layers.sourceline);

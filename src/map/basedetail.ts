@@ -11,7 +11,6 @@
  * cities are, which roads join them, where the built-up land is — not street
  * level, and the interface says so rather than implying otherwise.
  */
-import pack from '../data/detail/pack.json';
 import { PLACES } from '../data/territory';
 
 interface Pack {
@@ -23,9 +22,23 @@ interface Pack {
   places: unknown;
 }
 
-const P = pack as unknown as Pack;
+/**
+ * The pack's own metadata, kept here so the credits can be shown before the
+ * 3 MB pack itself has loaded. A test checks it against the pack.
+ */
+export const DETAIL_META: Pack['meta'] & { regions: Record<string, number[]> } = {"source": "Natural Earth 10m; settlements from the Countries States Cities database", "licence": "Natural Earth: public domain. Settlements: ODbL.", "attribution": "Natural Earth · CSC (ODbL)", "built": "2026-11-12", "scale": "1:10m — highway and settlement scale, not street level", "regions": {"ukraine": [21, 43, 41.5, 53.5], "caucasus": [38, 40, 50.5, 48], "yemen": [41, 11.5, 55, 19.5], "syria": [34.5, 31.5, 43, 38.5], "sudan": [21, 8, 39.5, 23.5], "libya": [9, 19, 26, 34], "drc": [11.5, -14, 32.5, 6], "palestine": [33.8, 29.2, 36.2, 33.5], "myanmar": [91.8, 9, 101.6, 28.8]}};
 
-export const DETAIL_META = P.meta;
+/**
+ * The pack loads on its own, after the map has opened: over live vector tiles
+ * it is hidden anyway, and where it is the base it fills in a moment later
+ * rather than holding up the whole map.
+ */
+let packPromise: Promise<Pack> | null = null;
+export function loadPack(): Promise<Pack> {
+  packPromise ??= import('../data/detail/pack.json').then((m) => ((m as { default?: unknown }).default ?? m) as unknown as Pack);
+  return packPromise;
+}
+const EMPTY = { type: 'FeatureCollection', features: [] };
 
 type MLMap = import('maplibre-gl').Map;
 
@@ -37,7 +50,7 @@ type MLMap = import('maplibre-gl').Map;
  * twice, one label above the other, which looks like a bug and reads like one.
  */
 let townsCache: unknown;
-function townsWithoutDuplicates(): unknown {
+function townsWithoutDuplicates(P: Pack): unknown {
   if (townsCache) return townsCache;
   const own = new Set(PLACES.map((p) => p.name.toLowerCase()));
   const fc = P.towns as { type: string; features: { properties: { n: string } }[] };
@@ -54,11 +67,16 @@ export function addBaseDetail(m: MLMap): void {
   const src = (id: string, data: unknown) => {
     if (!m.getSource(id)) m.addSource(id, { type: 'geojson', data: data as never });
   };
-  src('ne-urban', P.urban);
-  src('ne-rail', P.rail);
-  src('ne-roads', P.roads);
-  src('ne-places', P.places);
-  src('ne-towns', townsWithoutDuplicates());
+  for (const id of ['ne-urban', 'ne-rail', 'ne-roads', 'ne-places', 'ne-towns']) src(id, EMPTY);
+  void loadPack().then((P) => {
+    const data: Record<string, unknown> = {
+      'ne-urban': P.urban, 'ne-rail': P.rail, 'ne-roads': P.roads, 'ne-places': P.places, 'ne-towns': townsWithoutDuplicates(P),
+    };
+    for (const [id, d] of Object.entries(data)) {
+      // The map may have been closed, or its style swapped, while this loaded.
+      try { (m.getSource(id) as { setData?: (d: unknown) => void } | undefined)?.setData?.(d); } catch { /* map gone */ }
+    }
+  });
 
   const add = (spec: Parameters<MLMap['addLayer']>[0]) => { if (!m.getLayer(spec.id)) m.addLayer(spec); };
 

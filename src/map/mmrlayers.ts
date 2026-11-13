@@ -39,12 +39,13 @@ export function mmrLayerIds(): string[] {
 
 export const MMR_SITE_LAYERS = ['mmr-site-pt', 'mmr-site-label'];
 
-export function addMmrLayers(m: MLMap): void {
+/** `before`: the layer to insert under, so a late install keeps its place in the stack. */
+export function addMmrLayers(m: MLMap, before?: string): void {
   const src = (id: string, data: unknown) => {
     if (!m.getSource(id)) m.addSource(id, { type: 'geojson', data: data as never });
   };
   const add = (spec: Parameters<MLMap['addLayer']>[0]) => {
-    if (!m.getLayer(spec.id)) m.addLayer(spec);
+    if (!m.getLayer(spec.id)) m.addLayer(spec, before && m.getLayer(before) ? before : undefined);
   };
 
   src(MESH, townshipMeshFC());
@@ -113,8 +114,8 @@ export function addMmrLayers(m: MLMap): void {
 }
 
 /** Site labels need the style's glyphs, so they are added only when those exist. */
-export function addMmrSiteLabels(m: MLMap, lang: Lang): void {
-  if (!m.getStyle().glyphs || m.getLayer('mmr-site-label')) return;
+export function addMmrSiteLabels(m: MLMap, lang: Lang, before?: string): void {
+  if (!m.getStyle().glyphs || m.getLayer('mmr-site-label') || !m.getSource('mmr-sites')) return;
   m.addLayer({
     id: 'mmr-site-label', type: 'symbol', source: 'mmr-sites',
     layout: {
@@ -122,7 +123,7 @@ export function addMmrSiteLabels(m: MLMap, lang: Lang): void {
       'text-size': 11, 'text-offset': [0, 1.2], 'text-anchor': 'top', 'text-font': ['Noto Sans Regular'],
     },
     paint: { 'text-color': '#FFE7B0', 'text-halo-color': 'rgba(7,11,20,.9)', 'text-halo-width': 1.4 },
-  });
+  }, before && m.getLayer(before) ? before : undefined);
 }
 
 const esc = (s: string) =>

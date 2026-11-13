@@ -230,3 +230,10 @@ describe('bundled base detail', () => {
     expect(DETAIL_META.scale).toMatch(/not street level/i);
   });
 });
+
+import pack from '../src/data/detail/pack.json';
+describe('the bundled base detail', () => {
+  it('states the same credits before and after the pack loads', () => {
+    expect(DETAIL_META).toEqual((pack as { meta: unknown }).meta);
+  });
+});
