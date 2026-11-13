@@ -243,6 +243,18 @@ infiltration areas as separate, lighter uncertainty layers and the pre-2022
 occupation as an outline. The layer switches itself off if billing or ads go
 live; OCHA's labelled units remain the fallback. See `docs/CONTROL.md`.
 
+**Follow-up, 13 November 2026, evening:** the globe also draws ISW/CTP
+control and advances (coarsened to ~1 km), fetched only once the reader is
+close over Ukraine or has the war selected — the overview never downloads it.
+Measured on the live site: the app loads in about 1 s (1.1 MB of script,
+compressed); ISW's layer is 4.1 MB, about 0.9 s to fetch and 16 ms to parse,
+paid only when Ukraine is in view. Comparison stretches are named from the
+gazetteer's Ukrainian cities. Phone fixes from testing the live site at
+390 px: the page can no longer be dragged sideways onto the closed drawers,
+the globe settles on its resting view even if the window changes size during
+the entrance, and the map credits sit on one line. Frame rates could not be
+measured reliably in the automated browser, which throttles background tabs.
+
 ## Data sources and licensing
 
 | Source | Use | Licence / access | Status |
