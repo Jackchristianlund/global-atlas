@@ -1085,6 +1085,8 @@ ul.cmplist li { display: flex; flex-direction: column; gap: 2px; border-left: 2p
 .vs-quick button { color: var(--accent-soft); }
 .vs-quick button.on { background: rgba(0,217,255,.14); color: var(--cyan); }
 .vs-modes button:hover { color: var(--text); }
+.vs-snap { white-space: nowrap; }
+.vs-snap:disabled { opacity: .6; cursor: progress; }
 
 /* ── Share and search ──────────────────────────────────────────────────── */
 .hdr .sharebtn { font-size: 11px; padding: 5px 8px; white-space: nowrap; }

@@ -5,6 +5,7 @@ import { useStore } from '../store';
 import { CONFLICT } from '../data';
 import { REGION_FOR_CONFLICT } from '../lib/territory';
 import { useT } from '../i18n';
+import SnapshotButton from './SnapshotButton';
 
 const DENSITIES: LabelDensity[] = ['low', 'normal', 'high'];
 
@@ -60,6 +61,7 @@ export default function ViewSwitch() {
             );
           })}
         </div>
+        <div className="vs-modes"><SnapshotButton /></div>
       </div>
       {mapMode === 'map' && !styleOpen && (
         <button type="button" className="vs-modes vs-stylebtn" onClick={() => setStyleOpen(true)} aria-expanded={false}>

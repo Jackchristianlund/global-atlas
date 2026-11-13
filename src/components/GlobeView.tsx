@@ -17,6 +17,7 @@ import { buildHydro, setHydroOpacity } from '../lib/hydro';
 import { buildFrontMesh, type FrontMesh } from '../lib/frontmesh';
 import { globeOffset, panelInsets, restAltitude } from '../lib/framing';
 import { coarsen } from '../lib/control';
+import { registerCapture, withMarkers } from '../lib/snapshot';
 import { derivedContactHidden } from '../map/overlays';
 import { REGION_FOR_CONFLICT, belligerentColors, changedUnits, contactLines, frontsOfRegion, lighten, placesOfRegion, regionsWithData, territoryById, territoryFeatures, unitFill, type TerritoryFeature } from '../lib/territory';
 import { ACTOR, REGION } from '../data/territory';
@@ -353,6 +354,25 @@ export default function GlobeView() {
       g.pointOfView({ ...REST, altitude: restAlt.current }, 500);
     }
   }, [size.w, size.h, ready, insets]);
+
+  // "Download image": render one frame on demand and copy it out before the
+  // buffer is cleared, then draw the HTML markers into the copy.
+  useEffect(() => {
+    if (!ready) return;
+    registerCapture('globe', async () => {
+      const g = globe.current;
+      if (!g) throw new Error('globe not ready');
+      const r = g.renderer();
+      r.render(g.scene(), g.camera());
+      const src = r.domElement;
+      const copy = document.createElement('canvas');
+      copy.width = src.width;
+      copy.height = src.height;
+      copy.getContext('2d')!.drawImage(src, 0, 0);
+      return wrap.current ? withMarkers(copy, src.getBoundingClientRect(), wrap.current) : copy;
+    });
+    return () => registerCapture('globe', null);
+  }, [ready]);
 
   useEffect(() => {
     const g = globe.current;

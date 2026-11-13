@@ -21,6 +21,7 @@ import { isComputed, routePoints } from '../lib/routes';
 import { YEMEN_SITES } from '../data/yemen/explorer';
 import districts from '../data/yemen/districts.json';
 import { panelInsets } from '../lib/framing';
+import { registerCapture } from '../lib/snapshot';
 import { panelExpanded } from '../store';
 
 /**
@@ -173,6 +174,22 @@ export default function RegionMap() {
     // the rendering is being checked rather than guessed at.
     (window as unknown as { __ga_map?: unknown }).__ga_map = m;
 
+    // "Download image": the frame is copied inside the render event, while
+    // the drawing buffer still holds it.
+    registerCapture('map', () => new Promise((resolve, reject) => {
+      const giveUp = window.setTimeout(() => reject(new Error('the map did not render')), 8000);
+      m.once('render', () => {
+        window.clearTimeout(giveUp);
+        const src = m.getCanvas();
+        const copy = document.createElement('canvas');
+        copy.width = src.width;
+        copy.height = src.height;
+        copy.getContext('2d')!.drawImage(src, 0, 0);
+        resolve(copy);
+      });
+      m.triggerRepaint();
+    }));
+
     m.on('moveend', () => {
       if (moving.current) return;
       const c = m.getCenter();
@@ -204,6 +221,7 @@ export default function RegionMap() {
 
     return () => {
       live = false;
+      registerCapture('map', null);
       m.off('moveend', onMove);
       m.remove();
       map.current = null;
