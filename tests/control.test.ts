@@ -135,3 +135,17 @@ describe('naming a changed stretch', () => {
     expect(nearestPlace(stretch(45.0, 25.0), [])).toBeNull();
   });
 });
+
+describe('coarsening for the globe', () => {
+  it('drops rings that collapse or flip, which a globe would draw as the rest of the world', async () => {
+    const { coarsen } = await import('../src/lib/control');
+    const big = [[35, 46], [35, 49], [38, 49], [38, 46], [35, 46]]; // clockwise, kept
+    // A sliver a few metres wide: simplifies to a line.
+    const sliver = [[36, 47], [36.00001, 47.5], [36.00002, 47], [36.000015, 46.99], [36, 47]];
+    const f = (rings: number[][][]) => ({ type: 'Feature' as const, properties: { kind: 'advance' }, geometry: { type: 'Polygon' as const, coordinates: rings } });
+    const out = coarsen([f([big]), f([sliver])], 0.01);
+    expect(out).toHaveLength(1);
+    const g = out[0].geometry;
+    expect(g.type === 'MultiPolygon' && g.coordinates[0][0].length).toBeGreaterThanOrEqual(4);
+  });
+});

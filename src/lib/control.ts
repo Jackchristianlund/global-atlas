@@ -227,15 +227,29 @@ export async function loadControl(fetchImpl: typeof fetch = fetch, env?: Record<
  * at this tolerance are dropped; holes stay with their ring.
  */
 export function coarsen(features: GeoJsonFeature[], tolerance: number, kinds: ControlKind[] = ['control', 'advance']): GeoJsonFeature[] {
-  const ring = (r: number[][]) => simplifyPath(r as [number, number][], tolerance);
+  // A thin sliver can simplify to a zero-area ring, or one wound the other
+  // way. On a sphere a ring's winding decides which side is inside, so a
+  // flipped ring is drawn as the rest of the world: it is dropped instead.
+  const MIN_KM2 = 0.5;
+  const ring = (r: number[][], outer: boolean): number[][] | null => {
+    const s = simplifyPath(r as [number, number][], tolerance);
+    if (new Set(s.slice(0, -1).map((p) => `${p[0]},${p[1]}`)).size < 3) return null;
+    const before = ringSigned(r), after = ringSigned(s);
+    if (Math.abs(after) < MIN_KM2 || Math.sign(after) !== Math.sign(before)) return null;
+    if (outer && after <= 0) return null;
+    return s;
+  };
   const out: GeoJsonFeature[] = [];
   for (const f of features) {
     if (!kinds.includes(f.properties.kind as ControlKind)) continue;
     const g = f.geometry;
     const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
-    const kept = polys
-      .map((p) => p.map(ring).filter((r) => r.length >= 4))
-      .filter((p) => p.length > 0 && p[0].length >= 4);
+    const kept: number[][][][] = [];
+    for (const p of polys) {
+      const outer = ring(p[0], true);
+      if (!outer) continue; // without its outer ring, the holes mean nothing
+      kept.push([outer, ...p.slice(1).map((h) => ring(h, false)).filter((h): h is number[][] => !!h)]);
+    }
     if (kept.length) out.push({ ...f, geometry: { type: 'MultiPolygon', coordinates: kept } });
   }
   return out;
