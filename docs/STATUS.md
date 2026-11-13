@@ -280,6 +280,31 @@ measured reliably in the automated browser, which throttles background tabs.
   incidents up to September 2025.
 - **Sudan.** No control polygons added. See `docs/CONTROL.md` → Sudan.
 
+## Hormuz, monthly counts, May replay, weekly refresh (13 November 2026, late)
+
+- **Strait of Hormuz and the Gulf.** Fifteen dated attacks on merchant ships
+  in 2026, sourced like the Red Sea set. Chokepoint panels (Hormuz, Bab
+  el-Mandeb) list documented ship attacks within about 900 km. A test checks
+  every ship attack against Natural Earth's 10 m coastline so none sits on
+  land; it caught one, which was moved into the strait.
+- **JMIC per month.** The Yemen explorer shows incidents involving merchant
+  ships per month, November 2023 – January 2026 (120 in JMIC's Red Sea / Gulf
+  of Aden / Indian Ocean list). Counts, not points: the list has no positions.
+- **May replay.** "Play May day by day" steps through ISW's May 2026 archive
+  against 1 May. Checked on the live site: the archive shows almost no change
+  across May (≈0 km² gained, ≈37 km² lost by 31 May), so the replay is
+  quiet. That is what the source records, and it is shown as such.
+- **Weekly refresh.** `.github/workflows/refresh-frontline.yml` runs on Mondays
+  at 05:17 UTC (and on demand): it fetches OCHA's republication of ISW's
+  line, validates it, refuses anything older or dated in the future, runs
+  the tests, commits and redeploys. First run, 13 November: bundled copy
+  moved from the 4 November to the 11 November assessment (935 vertices at
+  ~330 m tolerance).
+- **Small fixes.** The detailed map now brings a selected attack into view (so
+  switching to the globe lands there too); an unknown attacker reads "not
+  established". Phone check at 390 px: no sideways scrolling, the image
+  button fits the view-switch row.
+
 ## Data sources and licensing
 
 | Source | Use | Licence / access | Status |
