@@ -341,9 +341,20 @@ export function YemenExplorer() {
   const years = snapshotYears('yemen');
   const events = useMemo(() => {
     const ev = EVENTS.filter((e) => e.conflict === 'yem').map((e) => ({ d: e.d, title: tl(e.t), color: EVENT_COLOR[e.type], attack: null as string | null }));
-    const at = ATTACKS.filter((a) => a.iso === 'YEM').map((a) => ({ d: a.d, title: tl(a.title), color: '#00D9FF', attack: a.id }));
+    const at = ATTACKS.filter((a) => a.conflict === 'yem').map((a) => ({ d: a.d, title: tl(a.title), color: '#00D9FF', attack: a.id }));
     return [...ev, ...at].sort((x, y) => y.d.localeCompare(x.d));
   }, [tl]);
+
+  // Attacks on merchant ships, newest first. The blockade declaration is a
+  // maritime record too, but not an attack on a ship, so it stays in the
+  // general event list below.
+  const ships = useMemo(() => ATTACKS
+    .filter((a) => a.conflict === 'yem' && a.category === 'maritime' && a.id.startsWith('at-ship-'))
+    .sort((x, y) => y.d.localeCompare(x.d)), []);
+  const openShip = (id: string) => {
+    if (!layers.attacks) toggleLayer('attacks');
+    select({ kind: 'attack', id });
+  };
 
   const showShipping = () => {
     if (!layers.routes) toggleLayer('routes');
@@ -405,6 +416,19 @@ export function YemenExplorer() {
           <button type="button" className="btn" onClick={showShipping}>{t('ry_shipping')}</button>
           <button type="button" className="mini" onClick={() => frameArea(BAB_EL_MANDEB.bbox)}>{t('ry_frameStrait')}</button>
         </div>
+        <h4>{t('ry_ships')}</h4>
+        <ul className="rx-events rx-ships">
+          {ships.map((a) => (
+            <li key={a.id}>
+              <button type="button" className="rowbtn" onClick={() => openShip(a.id)}>
+                <i className="sw dot" style={{ background: a.verification === 'disputed' ? '#B8C7DA' : '#00D9FF' }} />
+                <span>{tl(a.title)}<small>{tl(a.place)}{a.attacker ? '' : ` · ${t('ry_unknown')}`}</small></span>
+                <small className="rx-n">{fmtDate(a.d, lang)}</small>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <p className="note">{t('ry_shipsNote')}</p>
       </Section>
       <Section title={t('ry_places')}>
         {(['port', 'city'] as const).map((kind) => (

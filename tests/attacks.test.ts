@@ -41,7 +41,7 @@ describe('documented events and attacks', () => {
 
   it('states location precision rather than implying it', () => {
     for (const a of ATTACKS) {
-      expect(['exact', 'district', 'city', 'region'], a.id).toContain(a.precision);
+      expect(['exact', 'district', 'city', 'region', 'offshore'], a.id).toContain(a.precision);
       // Nothing in this snapshot claims a precise site, so nothing may be drawn as one.
       if (a.precision !== 'exact') expect(a.at.every((n) => Number.isFinite(n)), a.id).toBe(true);
     }
@@ -96,7 +96,9 @@ describe('documented events and attacks', () => {
   });
 
   it('respects the timeline year', () => {
-    expect(attacksUpTo(2024)).toHaveLength(0);
+    // The earliest records are the 2023 Red Sea shipping attacks.
+    expect(attacksUpTo(2022)).toHaveLength(0);
+    expect(attacksUpTo(2024).every((a) => a.d < '2025')).toBe(true);
     expect(attacksUpTo(2025).every((a) => a.d < '2026')).toBe(true);
     expect(attacksUpTo(2026).length).toBe(ATTACKS.length);
   });
@@ -134,5 +136,28 @@ describe('Ukraine is the deepest incident coverage', () => {
     const linked = attacksIn({ iso: 'UKR' }).filter((a) => a.territory);
     expect(linked.length).toBeGreaterThanOrEqual(8);
     for (const a of linked) expect(a.territory!.startsWith('UKR:')).toBe(true);
+  });
+});
+
+import { offshore } from '../src/data/attacks';
+describe('attacks on shipping', () => {
+  it('converts a reported distance and bearing from a port into a position at sea', () => {
+    // 60 nm due west of Al Hudaydah is one degree of longitude scaled by latitude.
+    const [lat, lng] = offshore('hudaydah', 60, 270);
+    expect(lat).toBeCloseTo(14.8, 2);
+    expect(42.95 - lng).toBeCloseTo(1 / Math.cos((14.8 * Math.PI) / 180), 2);
+  });
+  it('keeps every Red Sea ship attack dated, sourced and honest about the attacker', () => {
+    const ships = ATTACKS.filter((a) => a.id.startsWith('at-ship-'));
+    expect(ships.length).toBeGreaterThanOrEqual(8);
+    for (const a of ships) {
+      expect(a.category, a.id).toBe('maritime');
+      expect(a.conflict, a.id).toBe('yem');
+      // A position worked out from a port must say so in its place name.
+      if (a.precision === 'offshore') expect(a.place[1], a.id).toMatch(/nm/);
+      // Where nobody is named, nothing is filled in.
+      if (a.attacker === null) expect(a.what[1], a.id).not.toMatch(/Houthis (fired|attacked|struck)/);
+    }
+    expect(ATTACK['at-ship-tihamah-20260811'].verification).toBe('disputed');
   });
 });

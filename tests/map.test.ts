@@ -134,7 +134,7 @@ describe('map overlays come from the same data as the globe', () => {
   it('follows the selected year, like every other layer', () => {
     expect(territoryFC(2013).features).toHaveLength(territoryFeatures(2013).length);
     expect(contactFC(2013).features).toHaveLength(0);
-    expect(attackFC(2024).features).toHaveLength(0);
+    expect(attackFC(2022).features).toHaveLength(0);
     expect(attackFC(SNAPSHOT_YEAR).features).toHaveLength(ATTACKS.length);
     // A later year never shows fewer units than an earlier one here.
     expect(territoryFC(2026).features.length).toBeGreaterThan(territoryFC(2014).features.length);

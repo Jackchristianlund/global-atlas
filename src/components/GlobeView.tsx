@@ -402,7 +402,7 @@ export default function GlobeView() {
       const a = ATTACK[sel.id];
       // Close in for an exact location, stay higher where the source only gave
       // a city or a region: the camera should not imply precision the data lacks.
-      if (a) { at = a.at; altitude = a.precision === 'exact' ? 0.35 : a.precision === 'district' ? 0.5 : a.precision === 'city' ? 0.7 : 1.4; }
+      if (a) { at = a.at; altitude = a.precision === 'exact' ? 0.35 : a.precision === 'district' ? 0.5 : a.precision === 'city' || a.precision === 'offshore' ? 0.7 : 1.4; }
     } else if (sel?.kind === 'flow') {
       // Frame the corridor: the midpoint of the great circle, pulled back far
       // enough that both ends stay on screen.

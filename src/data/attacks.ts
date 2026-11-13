@@ -31,8 +31,11 @@ export type AttackCategory =
 /**
  * How precisely the sources place the event. Only `exact` means a specific
  * site; the rest are the centre of the named place, and the panel says so.
+ * `offshore` is a position at sea worked out from the distance and bearing a
+ * maritime authority gave from a named port ("30 nm southwest of Al
+ * Hudaydah"): good to a few nautical miles, never a ship's track.
  */
-export type Precision = 'exact' | 'district' | 'city' | 'region';
+export type Precision = 'exact' | 'district' | 'city' | 'region' | 'offshore';
 
 /**
  * `confirmed`: reported by named sources that observed or recorded it.
@@ -70,6 +73,27 @@ export interface Attack {
 }
 
 const cas = (t: L, d: string, s: string[], kind: Claim['kind'] = 'fact'): Claim => ({ cat: 'human', kind, t, d, s });
+
+/** Ports that maritime incident reports measure from. */
+const PORT: Record<string, [number, number]> = {
+  hudaydah: [14.80, 42.95],
+  mukha: [13.32, 43.25],
+  shuqaiq: [17.72, 42.02],
+  yanbu: [24.09, 38.06],
+  perim: [12.66, 43.42],
+};
+/**
+ * The position `nm` nautical miles from a port on a compass bearing, on a
+ * flat-earth approximation that is far inside the reports' own rounding.
+ */
+export function offshore(port: keyof typeof PORT, nm: number, bearing: number): [number, number] {
+  const [lat, lng] = PORT[port];
+  const r = (bearing * Math.PI) / 180;
+  const dLat = (nm / 60) * Math.cos(r);
+  const dLng = ((nm / 60) * Math.sin(r)) / Math.cos((lat * Math.PI) / 180);
+  return [Math.round((lat + dLat) * 1000) / 1000, Math.round((lng + dLng) * 1000) / 1000];
+}
+const NOT_STATED: L = ['Ikke oppgitt i dette datasettet.', 'Not stated in this dataset.'];
 
 export const ATTACKS: Attack[] = [
   // ── Ukraine ──────────────────────────────────────────────────────────────
@@ -309,5 +333,166 @@ export const ATTACKS: Attack[] = [
     civilian: null,
     conflict: 'yem', verification: 'attributed',
     s: ['wikiYemen'],
+  },
+  // ── Attacks on merchant shipping: Red Sea, Bab el-Mandeb, Gulf of Aden ──
+  // Positions are UKMTO's stated distance and bearing from a port, converted
+  // with `offshore`; where only a sea area is reported, the record says
+  // `region`. A projectile "of unknown origin" stays unknown here too.
+  {
+    id: 'at-ship-galaxyleader-20231119',
+    title: ['Houthiene kaprer bilfrakteskipet Galaxy Leader', 'The Houthis hijack the car carrier Galaxy Leader'],
+    category: 'maritime', d: '2023-11-19', published: '2023-11-19', iso: 'YEM',
+    place: ['Sørlige Rødehavet', 'Southern Red Sea'], at: [15.2, 41.9], precision: 'region',
+    attacker: ['Ansar Allah (houthiene)', 'Ansar Allah (the Houthis)'],
+    target: ['Bilfrakteskipet Galaxy Leader og mannskapet', 'The car carrier Galaxy Leader and her crew'],
+    what: ['Den første hendelsen i JMICs liste over angrep på handelsskip i Rødehavet etter oktober 2023. Skipet ble kapret fra helikopter og ført til Yemen.', 'The first incident in JMIC’s list of attacks on merchant ships in the Red Sea after October 2023. The ship was seized from a helicopter and taken to Yemen.'],
+    damage: null,
+    casualties: [cas(NOT_STATED, '2023-11-19', ['jmicJan26'], 'assessment')],
+    civilian: null,
+    conflict: 'yem', verification: 'confirmed',
+    s: ['jmicJan26', 'wikiRedSea'],
+  },
+  {
+    id: 'at-ship-trueconfidence-20240306',
+    title: ['Missil treffer True Confidence: tre sjøfolk drept', 'Missile hits True Confidence: three seafarers killed'],
+    category: 'maritime', d: '2024-03-06', published: '2024-03-06', iso: 'YEM',
+    place: ['Adenbukta', 'Gulf of Aden'], at: [12.4, 44.6], precision: 'region',
+    attacker: ['Ansar Allah (houthiene)', 'Ansar Allah (the Houthis)'],
+    target: ['Bulkskipet True Confidence', 'The bulk carrier True Confidence'],
+    what: ['Et houthi-missil traff skipet, og mannskapet forlot det. Dette var de første dødsfallene blant sjøfolk i kampanjen.', 'A Houthi missile hit the ship, and the crew abandoned her. These were the first seafarer deaths of the campaign.'],
+    damage: ['Betydelig skade; skipet ble forlatt.', 'Significant damage; the ship was abandoned.'],
+    casualties: [cas(['3 drept og 4 skadet, ifølge US Central Command.', '3 killed and 4 injured, according to US Central Command.'], '2024-03-06', ['wikiTrueConf'])],
+    civilian: ['Sivile sjøfolk.', 'Civilian seafarers.'],
+    conflict: 'yem', verification: 'confirmed',
+    s: ['wikiTrueConf'],
+  },
+  {
+    id: 'at-ship-tutor-20240612',
+    title: ['Tutor treffes av fjernstyrt båt og synker', 'Tutor is hit by an unmanned boat and sinks'],
+    category: 'maritime', d: '2024-06-12', published: '2024-06-12', iso: 'YEM',
+    place: ['Ca. 67 nm sørvest for Al Hudaydah (UKMTO)', 'About 67 nm southwest of Al Hudaydah (UKMTO)'], at: offshore('hudaydah', 66.7, 225), precision: 'offshore',
+    attacker: ['Ansar Allah (houthiene)', 'Ansar Allah (the Houthis)'],
+    target: ['Bulkskipet Tutor', 'The bulk carrier Tutor'],
+    what: ['Angrepet med en ubemannet overflatefarkost og et missil. Mannskapet forlot skipet, som sank 18. juni; UKMTO meldte at det trolig sank på 14°19′N 041°14′E.', 'Attacked with an unmanned surface vessel and a missile. The crew abandoned the ship, which sank on 18 June; UKMTO reported it likely sank at 14°19′N 041°14′E.'],
+    damage: ['Skipet sank.', 'The ship sank.'],
+    casualties: [cas(['1 sjømann drept.', '1 seafarer killed.'], '2024-06-18', ['wikiTutor'])],
+    civilian: ['Sivil sjømann.', 'Civilian seafarer.'],
+    conflict: 'yem', verification: 'confirmed',
+    s: ['wikiTutor'],
+  },
+  {
+    id: 'at-ship-sounion-20240821',
+    title: ['Tankskipet Sounion angripes og brenner', 'The tanker Sounion is attacked and burns'],
+    category: 'maritime', d: '2024-08-21', published: '2024-08-22', iso: 'YEM',
+    place: ['Ca. 77 nm vest for Al Hudaydah', 'About 77 nm west of Al Hudaydah'], at: offshore('hudaydah', 77, 270), precision: 'offshore',
+    attacker: ['Ansar Allah (houthiene)', 'Ansar Allah (the Houthis)'],
+    target: ['Tankskipet Sounion', 'The tanker Sounion'],
+    what: ['Det greskflaggede tankskipet ble angrepet og satt i brann i det sørlige Rødehavet.', 'The Greek-flagged tanker was attacked and set on fire in the southern Red Sea.'],
+    damage: ['Brann om bord.', 'Fire on board.'],
+    casualties: [cas(NOT_STATED, '2024-08-22', ['wikiSounion'], 'assessment')],
+    civilian: null,
+    conflict: 'yem', verification: 'confirmed',
+    s: ['wikiSounion'],
+  },
+  {
+    id: 'at-ship-magicseas-20250706',
+    title: ['Magic Seas angripes og forlates', 'Magic Seas is attacked and abandoned'],
+    category: 'maritime', d: '2025-07-06', published: '2025-07-06', iso: 'YEM',
+    place: ['Ca. 51 nm sørvest for Al Hudaydah (UKMTO)', 'About 51 nm southwest of Al Hudaydah (UKMTO)'], at: offshore('hudaydah', 51, 225), precision: 'offshore',
+    attacker: ['Ansar Allah (houthiene), som tok på seg angrepet', 'Ansar Allah (the Houthis), who claimed the attack'],
+    target: ['Bulkskipet Magic Seas', 'The bulk carrier Magic Seas'],
+    what: ['Angrepet med håndvåpen, rakettgranater og ubemannede båter. Mannskapet forlot skipet og ble reddet av et handelsskip; houthiene sa senere at det sank.', 'Attacked with small arms, rocket-propelled grenades and unmanned boats. The crew abandoned the ship and were rescued by a merchant vessel; the Houthis later said it sank.'],
+    damage: ['Brann og vanninntrenging; skipet ble forlatt.', 'Fire and flooding; the ship was abandoned.'],
+    casualties: [cas(['Hele mannskapet reddet, ifølge UKMTO.', 'All crew rescued, according to UKMTO.'], '2025-07-06', ['ajMagicSeas'])],
+    civilian: null,
+    conflict: 'yem', verification: 'confirmed',
+    s: ['ajMagicSeas'],
+  },
+  {
+    id: 'at-ship-eternityc-20250707',
+    title: ['Eternity C senkes; sjøfolk drept og savnet', 'Eternity C is sunk; seafarers killed and missing'],
+    category: 'maritime', d: '2025-07-07', published: '2025-07-09', iso: 'YEM',
+    place: ['Sørlige Rødehavet', 'Southern Red Sea'], at: [14.3, 42.0], precision: 'region',
+    attacker: ['Ansar Allah (houthiene), som tok på seg angrepet', 'Ansar Allah (the Houthis), who claimed the attack'],
+    target: ['Bulkskipet Eternity C', 'The bulk carrier Eternity C'],
+    what: ['Angrepet over to dager og sank. Seks av mannskapet ble reddet.', 'Attacked over two days and sank. Six of the crew were rescued.'],
+    damage: ['Skipet sank.', 'The ship sank.'],
+    casualties: [cas(['Minst 4 drept og 15 savnet, ifølge maritime kilder sitert av Reuters.', 'At least 4 killed and 15 missing, according to maritime officials cited by Reuters.'], '2025-07-09', ['ajEternity'])],
+    civilian: ['Sivile sjøfolk.', 'Civilian seafarers.'],
+    conflict: 'yem', verification: 'confirmed',
+    s: ['ajEternity'],
+  },
+  {
+    id: 'at-ship-hudaydah-20260705',
+    title: ['Lasteskip meldt angrepet av ukjente utenfor Al Hudaydah', 'Cargo ship reports attack by unknown assailants off Al Hudaydah'],
+    category: 'maritime', d: '2026-07-05', published: '2026-07-05', iso: 'YEM',
+    place: ['30 nm sørvest for Al Hudaydah (UKMTO)', '30 nm southwest of Al Hudaydah (UKMTO)'], at: offshore('hudaydah', 30, 225), precision: 'offshore',
+    attacker: null,
+    target: ['Et lasteskip (navn ikke oppgitt)', 'A cargo ship (name not given)'],
+    what: ['Skipet sendte nødsignal om angrep fra ukjente. Ingen gruppe tok på seg angrepet; UKMTO meldte at myndighetene undersøkte saken.', 'The ship sent a distress alert reporting an attack by unknown assailants. No group claimed it; UKMTO said authorities were investigating.'],
+    damage: null,
+    casualties: [cas(NOT_STATED, '2026-07-05', ['cnbcHud0705'], 'assessment')],
+    civilian: null,
+    conflict: 'yem', verification: 'confirmed',
+    s: ['cnbcHud0705', 'apHud0705'],
+  },
+  {
+    id: 'at-ship-encelia-20260722',
+    title: ['Saudisk tankskip Encelia treffes; houthiene tar på seg angrepet', 'Saudi tanker Encelia is hit; the Houthis claim the attack'],
+    category: 'maritime', d: '2026-07-22', published: '2026-07-22', iso: 'SAU',
+    place: ['70 nm sørvest for Al Shuqaiq (UKMTO 095-26)', '70 nm southwest of Al Shuqaiq (UKMTO 095-26)'], at: offshore('shuqaiq', 70, 225), precision: 'offshore',
+    attacker: ['Ansar Allah (houthiene), som tok på seg angrepet', 'Ansar Allah (the Houthis), who claimed the attack'],
+    target: ['Tankskipet Encelia; houthiene hevdet også å ha angrepet Layla', 'The tanker Encelia; the Houthis also claimed to have attacked Layla'],
+    what: ['Skipsføreren meldte treff av et ukjent prosjektil som førte til brann. Houthiene sa begge skipene hadde brutt deres blokade av Saudi-Arabia. Det første bekreftede angrepet etter blokadeerklæringen 20. juli.', 'The master reported being struck by an unknown projectile that caused a fire. The Houthis said both ships had violated their blockade of Saudi Arabia. The first confirmed attack after the blockade was declared on 20 July.'],
+    damage: ['Brann om bord.', 'Fire on board.'],
+    casualties: [cas(['Ingen skadde eller forurensning meldt, ifølge UKMTO.', 'No casualties or pollution reported, according to UKMTO.'], '2026-07-22', ['gcapEncelia'])],
+    civilian: null,
+    conflict: 'yem', verification: 'confirmed',
+    s: ['gcapEncelia', 'meesEncelia'],
+  },
+  {
+    id: 'at-ship-tihamah-20260811',
+    title: ['Lasteskipet Tihamah treffes ved Perim: sjøfolk og redningsmannskap drept', 'Cargo ship Tihamah hit off Perim: seafarers and rescuers killed'],
+    category: 'maritime', d: '2026-08-11', published: '2026-08-11', iso: 'YEM',
+    place: ['Til ankers 3,3 nm nordøst for Perim (Ambrey)', 'At anchor 3.3 nm northeast of Perim (Ambrey)'], at: offshore('perim', 3.3, 45), precision: 'offshore',
+    attacker: ['Omstridt: Yemens regjering og kystvakt peker på houthiene; Wall Street Journal meldte at et amerikansk helikopter skjøt mot skipet', 'Disputed: Yemen’s government and coastguard blame the Houthis; the Wall Street Journal reported a US helicopter fired on the ship'],
+    target: ['Det egyptiskeide lasteskipet Tihamah', 'The Egyptian-owned cargo ship Tihamah'],
+    what: ['UKMTO meldte at et lasteskip utenfor Al Mukha ble truffet av et ukjent prosjektil, med tap av liv. Houthiene tok ikke på seg angrepet.', 'UKMTO reported that a cargo ship off Al Mukha was hit by an unknown projectile, with loss of life. The Houthis did not claim the attack.'],
+    damage: ['Brann og omfattende skade, ifølge kystvakten.', 'Fire and extensive damage, according to the coastguard.'],
+    casualties: [
+      cas(['4 av mannskapet og 2 redningsfolk drept, ifølge Yemens kystvakt.', '4 crew and 2 rescuers killed, according to Yemen’s coastguard.'], '2026-08-12', ['ajTihamah']),
+      cas(['3 av mannskapet drept, ifølge Ambrey.', '3 crew killed, according to Ambrey.'], '2026-08-11', ['toiTihamah']),
+    ],
+    civilian: ['Sivile sjøfolk.', 'Civilian seafarers.'],
+    conflict: 'yem', verification: 'disputed',
+    s: ['ajTihamah', 'toiTihamah', 'abcTihamah'],
+  },
+  {
+    id: 'at-ship-mukha-20260818',
+    title: ['Ubemannet lasteskip ødelagt sørøst for Al Mukha', 'Unmanned cargo ship destroyed southeast of Al Mukha'],
+    category: 'maritime', d: '2026-08-18', published: '2026-08-18', iso: 'YEM',
+    place: ['Ca. 40 nm sørøst for Al Mukha (UKMTO 117-26)', 'About 40 nm southeast of Al Mukha (UKMTO 117-26)'], at: [12.75, 43.45], precision: 'region',
+    attacker: null,
+    target: ['Et ubemannet lasteskip (navn ikke oppgitt)', 'An unmanned cargo ship (name not given)'],
+    what: ['Lokale myndigheter meldte at skipet ble truffet av flere ukjente prosjektiler og er et totaltap. Datoen er da UKMTO meldte det. Merket står i stredet, ikke på den oppgitte posisjonen, fordi 40 nm rett sørøst for Al Mukha ville havne på land.', 'Local authorities reported the ship was struck by several unknown projectiles and is a total loss. The date is when UKMTO reported it. The marker is placed in the strait rather than at the stated position, because 40 nm due southeast of Al Mukha would fall on land.'],
+    damage: ['Totaltap.', 'Total loss.'],
+    casualties: [cas(['Skipet var ubemannet.', 'The ship was unmanned.'], '2026-08-18', ['gcapMukha'])],
+    civilian: null,
+    conflict: 'yem', verification: 'confirmed',
+    s: ['gcapMukha'],
+  },
+  {
+    id: 'at-ship-yanbu-20260824',
+    title: ['Saudiflagget tankskip i brann vest for Yanbu', 'Saudi-flagged tanker on fire west of Yanbu'],
+    category: 'maritime', d: '2026-08-24', published: '2026-08-24', iso: 'SAU',
+    place: ['Ca. 63 nm vest for Yanbu (UKMTO)', 'About 63 nm west of Yanbu (UKMTO)'], at: offshore('yanbu', 63, 270), precision: 'offshore',
+    attacker: null,
+    target: ['Et saudiflagget tankskip', 'A Saudi-flagged tanker'],
+    what: ['Et ukjent prosjektil forårsaket brann på hoveddekket. Hvem som sto bak, er ikke fastslått.', 'An unknown projectile caused a fire on the main deck. Who was behind it has not been established.'],
+    damage: ['Brann på hoveddekket.', 'Fire on the main deck.'],
+    casualties: [cas(['Mannskapet i god behold; ingen miljøskade meldt, ifølge UKMTO.', 'Crew safe; no environmental impact reported, according to UKMTO.'], '2026-08-24', ['weekYanbu'])],
+    civilian: null,
+    conflict: 'yem', verification: 'confirmed',
+    s: ['weekYanbu'],
   },
 ];

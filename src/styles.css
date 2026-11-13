@@ -1205,3 +1205,5 @@ html, body { overflow-x: hidden; }
 .rc-item .btn { justify-self: start; }
 .rc-item .btn.on { background: rgba(0,217,255,.16); border-color: var(--cyan); color: var(--cyan); }
 .rc-item small { color: var(--muted, #8D9AB0); font-size: 11px; line-height: 1.4; }
+.rx-ships span small { display: block; color: var(--muted, #8D9AB0); font-size: 10.5px; }
+.rx h4 { margin: 12px 0 4px; }

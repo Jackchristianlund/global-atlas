@@ -255,6 +255,31 @@ the globe settles on its resting view even if the window changes size during
 the entrance, and the map credits sit on one line. Frame rates could not be
 measured reliably in the automated browser, which throttles background tabs.
 
+## Faster start, image export, recent changes, Red Sea shipping (13 November 2026, night)
+
+- **Faster start.** The page shell, panels and timeline no longer wait for the
+  globe: the globe (with three.js) and the dialogs are separate chunks.
+  Script needed before first paint: 402 KB compressed, down from 1,177 KB.
+- **Download image.** "⤓ Last ned bilde" beside the view switch saves a PNG of
+  the globe or map as it is on screen, with a title, the date it describes
+  and "ikke sanntid", the key for what is drawn, and every source credited on
+  screen (ISW's non-commercial credit when its polygons are shown). The globe's
+  HTML markers are drawn into the picture so it keeps the conflict dots.
+- **Recent changes (Ukraine).** One click for "front line: last month" (OCHA's
+  latest month line at least four weeks old, against today's) and, with ISW
+  on, "control since 31 May" (ISW's last clean archive day). ISW does not date
+  individual advance areas, so shorter windows such as "last week" are not
+  offered; the panel says so.
+- **Red Sea / Bab el-Mandeb.** Eleven dated attacks on merchant ships
+  (November 2023 – August 2026), each with its source. Positions are
+  UKMTO's stated distance and bearing from a port, converted and labelled as
+  "position at sea, a few nautical miles uncertain"; one that would land
+  ashore is put in the strait and says so. Unknown attackers stay unknown;
+  the Tihamah attack (11 August 2026) is marked disputed. The Yemen explorer
+  lists them by date. This is a selection, not a register: JMIC counted 123
+  incidents up to September 2025.
+- **Sudan.** No control polygons added. See `docs/CONTROL.md` → Sudan.
+
 ## Data sources and licensing
 
 | Source | Use | Licence / access | Status |

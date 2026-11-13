@@ -98,3 +98,26 @@ monetisation, as for the front line.
 
 - **DeepStateMap** — geometry not used anywhere; needs an agreement.
 - **Deriving sides from the OCHA line** — not done, by rule.
+
+## Sudan: no polygon source yet (13 November 2026)
+
+Sudan keeps its state-level control records (each sourced and dated). A
+finer layer needs geometry from someone who labels the sides, and none was
+found that is both machine-readable and licensed for this use:
+
+- **Sudans Post Geospatial** publishes dated national and state control maps
+  (latest seen: 21 June 2026) as images under its own terms of use. Usable
+  only with permission; they would also need tracing.
+- **AEI's Critical Threats Project** publishes Sudan battle maps in its weekly
+  Africa File. ISW's permission was given for ISW/CTP's Ukraine data; whether
+  it covers CTP's Sudan maps, and whether a Sudan feature layer exists like
+  the Ukraine one, has to be asked. If it does, `lib/control.ts` can load it
+  the same way.
+- **Thomas van Linge / PolGeoNow** — subscription or reuse terms; not used.
+- **Wikimedia Commons control map** — CC BY-SA but crowd-edited, and a
+  hand-drawn SVG with no georeference: tracing it would make the geometry ours,
+  not a source's. Not used.
+
+Recommended: ask ISW/CTP whether the existing permission extends to CTP's
+Sudan control data.
+
