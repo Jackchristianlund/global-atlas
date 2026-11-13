@@ -149,15 +149,31 @@ describe('attacks on shipping', () => {
   });
   it('keeps every Red Sea ship attack dated, sourced and honest about the attacker', () => {
     const ships = ATTACKS.filter((a) => a.id.startsWith('at-ship-'));
-    expect(ships.length).toBeGreaterThanOrEqual(8);
+    expect(ships.length).toBeGreaterThanOrEqual(20);
     for (const a of ships) {
       expect(a.category, a.id).toBe('maritime');
-      expect(a.conflict, a.id).toBe('yem');
+      expect(['yem', 'iran'], a.id).toContain(a.conflict);
       // A position worked out from a port must say so in its place name.
       if (a.precision === 'offshore') expect(a.place[1], a.id).toMatch(/nm/);
       // Where nobody is named, nothing is filled in.
       if (a.attacker === null) expect(a.what[1], a.id).not.toMatch(/Houthis (fired|attacked|struck)/);
     }
     expect(ATTACK['at-ship-tihamah-20260811'].verification).toBe('disputed');
+  });
+});
+
+import { JMIC_MONTHLY } from '../src/data/yemen/jmicMonthly';
+describe('JMIC monthly incident counts', () => {
+  it('covers every month from November 2023 to January 2026 once, and adds up to the list', () => {
+    const months = JMIC_MONTHLY.map((x) => x.m);
+    expect(months[0]).toBe('2023-11');
+    expect(months[months.length - 1]).toBe('2026-01');
+    expect(months).toHaveLength(27);
+    for (let i = 1; i < months.length; i++) {
+      const [y0, m0] = months[i - 1].split('-').map(Number), [y1, m1] = months[i].split('-').map(Number);
+      expect((y1 - y0) * 12 + (m1 - m0)).toBe(1);
+    }
+    // 123 numbered rows, three of which (112, 115, 116) are in JMIC's Gulf table.
+    expect(JMIC_MONTHLY.reduce((a, x) => a + x.n, 0)).toBe(120);
   });
 });

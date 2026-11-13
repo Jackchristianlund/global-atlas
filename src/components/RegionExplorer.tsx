@@ -4,6 +4,7 @@ import { EVENTS, EVENT_COLOR } from '../data';
 import { ACTOR, ACTORS, PLACES } from '../data/territory';
 import { SOURCES } from '../data/sources';
 import { BAB_EL_MANDEB, RED_SEA_BBOX, YEMEN_SITES } from '../data/yemen/explorer';
+import { JMIC_MONTHLY } from '../data/yemen/jmicMonthly';
 import { HISTORY_MONTHS, monthDate, recentMonth, type HistoryMonth } from '../lib/frontlineHistory';
 import { ARCHIVE_DAYS } from '../lib/archiveDays';
 import { areaKm2 } from '../lib/control';
@@ -174,6 +175,11 @@ function ControlSince() {
   const st = useStore((s) => s.controlChange);
   const setSince = useStore((s) => s.setControlSince);
   const frameArea = useStore((s) => s.frameArea);
+  const playing = useStore((s) => s.mayPlay);
+  const playMay = useStore((s) => s.playMay);
+  const stopMay = useStore((s) => s.stopMay);
+  // A May replay frame compares two archive days, not an archive day and now.
+  const replay = st.status === 'ready' && st.change.since === ARCHIVE_DAYS[0] && ARCHIVE_DAYS.includes(st.change.now);
   const [day, setDay] = useState(ARCHIVE_DAYS[0]);
   const [cities, setCities] = useState<Named[]>(ukrCities ?? []);
   useEffect(() => { if (st.status === 'ready' && !cities.length) void loadUkrCities().then(setCities); }, [st.status, cities.length]);
@@ -200,17 +206,26 @@ function ControlSince() {
         <label><span>{t('cmpf_to')}</span><select disabled value="now"><option value="now">{t('cmpf_now')}</option></select></label>
       </div>
       <div className="fcmp-actions">
-        <button type="button" className="btn" disabled={st.status === 'loading'} onClick={() => setSince(day)}>{since ? t('cmpf_rerun') : t('cmpf_run')}</button>
+        <button type="button" className="btn" disabled={st.status === 'loading' && !playing} onClick={() => setSince(day)}>{since ? t('cmpf_rerun') : t('cmpf_run')}</button>
         {since && <button type="button" className="mini" onClick={() => setSince(null)}>{t('cmpf_stop')}</button>}
+        <button type="button" className={`btn${playing ? ' on' : ''}`} aria-pressed={!!playing} onClick={() => (playing ? stopMay() : playMay())}>
+          {playing ? `■ ${t('mp_stop')}` : `▶ ${t('mp_play')}`}
+        </button>
       </div>
+      {playing && (
+        <div className="mp-day" role="status" aria-live="polite">
+          <b>{fmtDate(playing, lang)}</b>
+          <span className="mp-track"><span style={{ width: `${((ARCHIVE_DAYS.indexOf(playing) + 1) / ARCHIVE_DAYS.length) * 100}%` }} /></span>
+        </div>
+      )}
       {st.status === 'loading' && <p className="meta">{t('fl_h_loading')}</p>}
       {st.status === 'unavailable' && <p className="fl-warn">{t('cs_off')} ({st.reason})</p>}
       {st.status === 'ready' && (
         <div className="fcmp-out">
           <p className="fcmp-sum">
-            <i className="sw box" style={{ background: '#FFB020' }} /> <b>+{fmtNum(st.change.gainedKm2, lang)} km²</b> {t('cs_gained')}
+            <i className="sw box" style={{ background: '#FFB020' }} /> <b>+{fmtNum(st.change.gainedKm2, lang)} km²</b> {replay ? t('mp_gained').replace('{n}', fmtDate(st.change.now, lang)) : t('cs_gained')}
             <br />
-            <i className="sw box" style={{ background: '#5CE1FF' }} /> <b>−{fmtNum(st.change.lostKm2, lang)} km²</b> {t('cs_lost')}
+            <i className="sw box" style={{ background: '#5CE1FF' }} /> <b>−{fmtNum(st.change.lostKm2, lang)} km²</b> {replay ? t('mp_lost').replace('{n}', fmtDate(st.change.now, lang)) : t('cs_lost')}
           </p>
           {st.change.bbox && <button type="button" className="mini" onClick={() => frameArea(padBbox(st.change.bbox!, 0.15))}>⌖ {t('cmpf_frameAll')}</button>}
           <ol className="fcmp-list">
@@ -226,7 +241,8 @@ function ControlSince() {
           <p className="note">{t('cs_note').replace('{d}', fmtDate(st.change.since, lang)).replace('{n}', fmtDate(st.change.now, lang))}</p>
         </div>
       )}
-      {!since && <p className="note">{t('cs_hint')}</p>}
+      {!since && !playing && st.status !== 'ready' && <p className="note">{t('cs_hint')}</p>}
+      <p className="note">{t('mp_note')}</p>
     </div>
   );
 }
@@ -328,6 +344,30 @@ export function UkraineExplorer() {
   );
 }
 
+/** JMIC's incident list as a month-by-month bar strip: counts, not places. */
+function JmicMonthly() {
+  const { t, lang } = useT();
+  const max = Math.max(...JMIC_MONTHLY.map((x) => x.n), 1);
+  const label = (m: string) => new Date(`${m}-15T00:00:00Z`).toLocaleDateString(lang === 'no' ? 'nb-NO' : 'en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const total = JMIC_MONTHLY.reduce((a, x) => a + x.n, 0);
+  return (
+    <figure className="jmic" aria-label={t('ry_jmicTitle')}>
+      <div className="jmic-bars" role="list">
+        {JMIC_MONTHLY.map((x) => (
+          <div key={x.m} role="listitem" className={`jmic-bar${x.m.endsWith('-01') ? ' yr' : ''}`} title={`${label(x.m)}: ${x.n}`} aria-label={`${label(x.m)}: ${x.n}`}>
+            <span style={{ height: `${(x.n / max) * 100}%` }} />
+            {x.m.endsWith('-01') && <em>{x.m.slice(0, 4)}</em>}
+          </div>
+        ))}
+      </div>
+      <figcaption>
+        <b>{t('ry_jmicTitle')}</b> · {fmtNum(total, lang)} {t('ry_jmicTotal')}
+        <small>{t('ry_jmicNote')} <a href={SOURCES.jmicJan26.url} target="_blank" rel="noopener noreferrer">JMIC</a></small>
+      </figcaption>
+    </figure>
+  );
+}
+
 export function YemenExplorer() {
   const { t, tl, lang } = useT();
   const year = useStore((s) => s.year);
@@ -416,6 +456,7 @@ export function YemenExplorer() {
           <button type="button" className="btn" onClick={showShipping}>{t('ry_shipping')}</button>
           <button type="button" className="mini" onClick={() => frameArea(BAB_EL_MANDEB.bbox)}>{t('ry_frameStrait')}</button>
         </div>
+        <JmicMonthly />
         <h4>{t('ry_ships')}</h4>
         <ul className="rx-events rx-ships">
           {ships.map((a) => (

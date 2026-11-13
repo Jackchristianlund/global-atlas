@@ -1,0 +1,63 @@
+# Keeps the bundled front-line copy at most about a week behind the source.
+#
+# Once a week it asks UN OCHA's republication of ISW/CTP's line of contact for
+# the current line. If the service has a newer, valid assessment, the bundled
+# snapshot is rewritten, the full test suite runs, and only then is it
+# committed and the site redeployed. If anything fails, nothing is committed
+# and the site keeps the copy it had. The live map does not depend on this:
+# it fetches the line itself and uses the bundled copy only as a fallback.
+name: Refresh front-line snapshot
+
+on:
+  schedule:
+    # Mondays 05:17 UTC (OCHA usually publishes ISW's line within a few days).
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: refresh-frontline
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Fetch and validate the current line
+        run: npx tsx scripts/refresh-frontline.ts
+      - name: Anything new?
+        id: diff
+        run: |
+          if git diff --quiet -- src/data/frontline/ukr-ocha.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Test before committing
+        if: steps.diff.outputs.changed == 'true'
+        run: npm test
+      - name: Commit
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          DATE=$(node -p "require('./src/data/frontline/ukr-ocha.json').metadata.assessmentDate")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/frontline/ukr-ocha.json
+          git commit -m "Front line: bundled copy refreshed to OCHA/ISW assessment of $DATE"
+          git push
+      # A push made with this workflow's token does not start other workflows,
+      # so the deploy is started explicitly.
+      - name: Redeploy
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main

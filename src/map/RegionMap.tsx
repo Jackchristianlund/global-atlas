@@ -19,6 +19,7 @@ import { REGION_FOR_CONFLICT } from '../lib/territory';
 import { ALL_ROUTES, CHOKEPOINTS } from '../data';
 import { isComputed, routePoints } from '../lib/routes';
 import { YEMEN_SITES } from '../data/yemen/explorer';
+import { ATTACK } from '../lib/attacks';
 import districts from '../data/yemen/districts.json';
 import { panelInsets } from '../lib/framing';
 import { registerCapture } from '../lib/snapshot';
@@ -589,6 +590,22 @@ export default function RegionMap() {
       maxZoom: 11, duration: 900,
     });
   }, [frame]);
+
+  // An attack chosen from anywhere (a list, the timeline, the globe) is
+  // brought into view, at a zoom that does not claim more precision than the
+  // record has. The move ends in moveend, which stores the view, so switching
+  // back to the globe lands on the same place.
+  const attackId = sel?.kind === 'attack' ? sel.id : null;
+  useEffect(() => {
+    const m = map.current;
+    const a = attackId ? ATTACK[attackId] : null;
+    if (!m || !a) return;
+    const zoom = a.precision === 'exact' ? 11 : a.precision === 'district' ? 9.5 : a.precision === 'city' ? 8.5 : a.precision === 'offshore' ? 7 : 5.5;
+    const st = useStore.getState();
+    const ins = panelInsets(m.getContainer().clientWidth, { leftFolded: st.leftCollapsed, rightFolded: st.rightCollapsed, expanded: panelExpanded(st) });
+    m.easeTo({ center: [a.at[1], a.at[0]], zoom,
+      padding: { top: 70, bottom: 70, left: ins.left + 40, right: ins.right + 40 }, duration: 900 });
+  }, [attackId]);
 
   // Visibility is reapplied after every render, but a render can land while
   // MapLibre is mid-style-update, and paint bails out in that case. Without a

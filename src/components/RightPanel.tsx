@@ -15,6 +15,8 @@ import { ActorPanel, TerritoryPanel } from './TerritoryPanel';
 import { ExtSeries } from './DataBits';
 import { CountryFlows, DisplacementOverview, FlowPanel } from './DisplacementPanel';
 import { AttackPanel } from './AttackPanel';
+import { ATTACKS } from '../data/attacks';
+import { haversineKm } from '../lib/geo';
 import PlacePanel from './PlacePanel';
 import { Ad } from './Commerce';
 import { CompareSection, ContactSection } from './TerritoryPanel';
@@ -278,6 +280,9 @@ function CountryPanel({ code }: { code: Iso }) {
   );
 }
 
+/** How far from a strait a ship attack is still listed under it. */
+const SHIP_RADIUS_KM = 900;
+
 function ChokepointPanel({ id }: { id: string }) {
   const { t, tl, lang } = useT();
   const select = useStore((s) => s.select);
@@ -286,6 +291,10 @@ function ChokepointPanel({ id }: { id: string }) {
   const at = cp.at;
   const links = LINKS.filter((l) => (l.from.at[0] === at[0] && l.from.at[1] === at[1]) || (l.to.at[0] === at[0] && l.to.at[1] === at[1]));
   const max = Math.max(cp.oil2023 ?? 0, cp.oil2q26 ?? 0, 1);
+  // Documented attacks on merchant ships within a day's steaming of the strait.
+  const ships = useMemo(() => ATTACKS
+    .filter((a) => a.id.startsWith('at-ship-') && haversineKm(a.at, cp.at) <= SHIP_RADIUS_KM)
+    .sort((x, y) => y.d.localeCompare(x.d)), [cp]);
   return (
     <article>
       <header className="p-head">
@@ -313,6 +322,22 @@ function ChokepointPanel({ id }: { id: string }) {
       <Section title={t('exposedCountries')}>
         {cp.exposed.length ? <ul className="plain">{cp.exposed.map((e, i) => <li key={i}><CountryChip iso={e.iso} /> {tl(e.t)} <Src ids={e.s} /></li>)}</ul> : <Empty>{t('naData')}</Empty>}
       </Section>
+      {ships.length > 0 && (
+        <Section title={t('cp_ships')}>
+          <ul className="rx-events rx-ships">
+            {ships.map((a) => (
+              <li key={a.id}>
+                <button type="button" className="rowbtn" onClick={() => select({ kind: 'attack', id: a.id })}>
+                  <i className="sw dot" style={{ background: a.verification === 'disputed' ? '#B8C7DA' : '#00D9FF' }} />
+                  <span>{tl(a.title)}<small>{tl(a.place)}</small></span>
+                  <small className="rx-n">{fmtDate(a.d, lang)}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="note">{t('cp_shipsNote')}</p>
+        </Section>
+      )}
       <Section title={t('nearbyConflicts')}>{cp.conflicts.length ? cp.conflicts.map((c) => <ConflictLink key={c} id={c} />) : <Empty>{t('none')}</Empty>}</Section>
       <Section title={`${t('routesVia')} ${tl(cp.name)}`}>
         {via.length ? via.map((r) => <button key={r.id} type="button" className="rowbtn" onClick={() => select({ kind: 'route', id: r.id })}>{tl(r.name)}</button>) : <Empty>{t('none')}</Empty>}

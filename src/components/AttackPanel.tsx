@@ -37,7 +37,7 @@ export function AttackPanel({ id }: { id: string }) {
         <p className="note"><b>{t('at_precision')}:</b> {t(`p_${a.precision}` as 'p_city')}</p>
       </Section>
       <Section title={t('at_attacker')}>
-        {a.attacker ? <p>{tl(a.attacker)}</p> : <Empty>{t('naData')}</Empty>}
+        {a.attacker ? <p>{tl(a.attacker)}</p> : <Empty>{t('at_notEstablished')}</Empty>}
         {a.target && <p className="note"><b>{t('at_target')}:</b> {tl(a.target)}</p>}
       </Section>
       <Section title={t('at_cas')}>

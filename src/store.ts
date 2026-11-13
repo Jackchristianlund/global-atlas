@@ -3,6 +3,8 @@ import { bundledFrontline, frontlinePaths, loadFrontline as loadFrontlineData, t
 import { diffFronts, type FrontDiff, type LatLng as DiffLatLng } from './lib/frontDiff';
 import { loadControl as loadControlData, type ControlState } from './lib/control';
 import type { ChangeState } from './lib/controlHistory';
+import { ARCHIVE_DAYS } from './lib/archiveDays';
+import type { GeoJsonFeature } from './lib/arcgis';
 import { conflictBbox, zoomForBbox } from './lib/territory';
 import { cachedMonth, loadMonth, monthDate, type HistoryMonth, type MonthState } from './lib/frontlineHistory';
 import type { ConflictType, Iso, Lang, LayerId, Selection, ViewId } from './types';
@@ -31,6 +33,10 @@ function remembered<T extends string>(key: string, allowed: readonly T[], fallba
  * reader their layout, not the app.
  */
 const LAYER_KEY = 'ga.layers';
+/** How long each day of the May playback stays on screen. */
+const MAY_FRAME_MS = 650;
+/** The playback that is allowed to keep drawing; anything else stops itself. */
+let mayRun: symbol | null = null;
 
 function rememberedLayers<T extends object>(fallback: T): T {
   try {
@@ -122,6 +128,14 @@ interface State {
   controlSince: string | null;
   controlChange: ChangeState;
   setControlSince: (day: string | null) => void;
+  /**
+   * Playing ISW's May 2026 archive day by day: the day on screen, or null.
+   * Each frame is that day's control compared with 1 May, through the same
+   * gained/lost layers as "control since".
+   */
+  mayPlay: string | null;
+  playMay: () => void;
+  stopMay: () => void;
   /**
    * A request to frame an area, from anywhere in the interface: the map fits
    * it, the globe flies to it. `n` changes on every request so asking for the
@@ -266,7 +280,10 @@ export const useStore = create<State>((set, get) => ({
   control: { status: 'idle' },
   controlSince: null,
   controlChange: { status: 'idle' },
+  mayPlay: null,
   setControlSince: (day) => {
+    mayRun = null;
+    if (get().mayPlay) set({ mayPlay: null });
     if (!day) { set({ controlSince: null, controlChange: { status: 'idle' } }); return; }
     set({ controlSince: day, controlChange: { status: 'loading' } });
     void (async () => {
@@ -291,6 +308,52 @@ export const useStore = create<State>((set, get) => ({
         set({ controlChange: { status: 'unavailable', reason: err instanceof Error ? err.message : 'unavailable' } });
       }
     })();
+  },
+  playMay: () => {
+    if (get().mayPlay) return;
+    const run = Symbol('may');
+    mayRun = run;
+    set({ controlSince: null, mayPlay: ARCHIVE_DAYS[0], controlChange: { status: 'loading' } });
+    void (async () => {
+      try {
+        // The archive is ISW's: it plays only where ISW's layer may be shown.
+        await get().loadControl();
+        const c = get().control;
+        if (c.status !== 'ready' || c.layer.source !== 'isw') throw new Error('ISW layer unavailable');
+        const { compareControl, loadArchiveDay } = await import('./lib/controlHistory');
+        const cache = new Map<string, Promise<GeoJsonFeature[] | null>>();
+        // A day that fails to load is skipped, not drawn as "no control".
+        const day = (d: string) => {
+          if (!cache.has(d)) cache.set(d, loadArchiveDay(d).catch(() => null));
+          return cache.get(d)!;
+        };
+        const first = ARCHIVE_DAYS[0];
+        const base = await day(first);
+        if (!base) throw new Error(`no archive snapshot for ${first}`);
+        let framed = false;
+        for (let i = 1; i < ARCHIVE_DAYS.length; i++) {
+          if (mayRun !== run) return;
+          const d = ARCHIVE_DAYS[i];
+          void day(ARCHIVE_DAYS[i + 1] ?? d); // fetch the next day while this one shows
+          const feats = await day(d);
+          if (mayRun !== run) return;
+          if (!feats) continue;
+          await new Promise((r) => setTimeout(r, 0));
+          const change = compareControl(feats, base, first, d);
+          set({ mayPlay: d, controlChange: { status: 'ready', change } });
+          if (!framed && change.bbox) { get().frameArea(change.bbox); framed = true; }
+          await new Promise((r) => setTimeout(r, MAY_FRAME_MS));
+        }
+        if (mayRun === run) set({ mayPlay: null });
+      } catch (err) {
+        if (mayRun !== run) return;
+        set({ mayPlay: null, controlChange: { status: 'unavailable', reason: err instanceof Error ? err.message : 'unavailable' } });
+      }
+    })();
+  },
+  stopMay: () => {
+    mayRun = null;
+    set({ mayPlay: null });
   },
   loadControl: async () => {
     const st = get().control.status;

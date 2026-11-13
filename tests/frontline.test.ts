@@ -130,8 +130,10 @@ describe('the bundled snapshot', () => {
   it('is the ISW assessment republished by OCHA, dated and attributed', () => {
     expect(set.meta.source).toMatch(/Institute for the Study of War/);
     expect(set.meta.publisher).toBe('UN OCHA');
-    expect(set.meta.assessmentDate).toBe('2026-11-04');
-    expect(set.meta.retrieved).toBe('2026-11-11');
+    // Refreshed weekly by scripts/refresh-frontline.ts, so the dates are
+    // checked for shape and order rather than pinned.
+    expect(set.meta.assessmentDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(set.meta.retrieved >= set.meta.assessmentDate).toBe(true);
     expect(set.meta.serviceUrl).toContain('gis.unocha.org');
   });
 
@@ -156,9 +158,9 @@ describe('the bundled snapshot', () => {
     expect(set.meta.toleranceMetresApprox.main).toBeGreaterThan(0);
   });
 
-  it('holds the eight segments the service returned', () => {
-    expect(set.features).toHaveLength(8);
-    expect(set.meta.featureCount).toBe(8);
+  it('holds the segments the service returned, and says how many', () => {
+    expect(set.features.length).toBeGreaterThanOrEqual(2);
+    expect(set.meta.featureCount).toBe(set.features.length);
   });
 
   it('passes the same validation a live feed has to pass', () => {
@@ -168,16 +170,17 @@ describe('the bundled snapshot', () => {
   });
 
   it('runs from the Black Sea coast to north of Kharkiv', () => {
-    const main = set.features.find((f) => f.id === 395)!;
-    const c = main.geometry.coordinates as number[][];
-    expect(c[0]).toEqual([31.513, 46.5802]);
-    expect(c[c.length - 1]).toEqual([36.1776, 50.402]);
+    const main = set.features.find((f) => f.properties.part === 'main')!;
+    const lats = (main.geometry.coordinates as number[][]).map((p) => p[1]);
+    // The Dnipro estuary is below 47°N; Kharkiv oblast's border is above 50°N.
+    expect(Math.min(...lats)).toBeLessThan(47);
+    expect(Math.max(...lats)).toBeGreaterThan(50);
   });
 
   it('flattens to paths that keep each segment date', () => {
     const paths = frontlinePaths(set);
-    expect(paths).toHaveLength(8);
-    for (const p of paths) expect(p.date).toBe('2026-11-04');
+    expect(paths).toHaveLength(set.features.length);
+    for (const p of paths) expect(p.date <= set.meta.assessmentDate).toBe(true);
   });
 
   it('exposes its metadata without being loaded', () => {

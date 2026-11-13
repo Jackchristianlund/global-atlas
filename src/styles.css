@@ -1207,3 +1207,17 @@ html, body { overflow-x: hidden; }
 .rc-item small { color: var(--muted, #8D9AB0); font-size: 11px; line-height: 1.4; }
 .rx-ships span small { display: block; color: var(--muted, #8D9AB0); font-size: 10.5px; }
 .rx h4 { margin: 12px 0 4px; }
+
+/* ── JMIC incidents per month (Yemen explorer) ─────────────────────────── */
+.jmic { margin: 10px 0 4px; }
+.jmic-bars { display: flex; align-items: flex-end; gap: 2px; height: 64px; padding-bottom: 14px; position: relative; }
+.jmic-bar { flex: 1; height: 100%; display: flex; align-items: flex-end; position: relative; }
+.jmic-bar span { display: block; width: 100%; min-height: 1px; background: #00D9FF; border-radius: 1px 1px 0 0; opacity: .85; }
+.jmic-bar.yr::before { content: ''; position: absolute; left: -1px; top: 0; bottom: -14px; border-left: 1px dashed rgba(201,214,232,.25); }
+.jmic-bar em { position: absolute; bottom: -14px; left: 2px; font-style: normal; font-size: 9.5px; color: var(--muted, #8D9AB0); font-family: var(--mono); }
+.jmic figcaption { font-size: 11.5px; line-height: 1.4; }
+.jmic figcaption small { display: block; color: var(--muted, #8D9AB0); font-size: 10.5px; margin-top: 2px; }
+.mp-day { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-family: var(--mono); font-size: 12px; }
+.mp-track { flex: 1; height: 4px; background: rgba(201,214,232,.15); border-radius: 2px; overflow: hidden; }
+.mp-track span { display: block; height: 100%; background: #FFB020; transition: width .3s; }
+.fcmp-actions .btn.on { background: rgba(255,176,32,.16); border-color: #FFB020; color: #FFD678; }
