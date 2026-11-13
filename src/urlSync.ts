@@ -1,3 +1,4 @@
+import { SHARE_CONFLICTS } from './lib/shareConflicts';
 import { ACTOR, PLACES } from './data/territory';
 import { CHOKEPOINT, CONFLICT, COUNTRY_CODES, ORG, ROUTE, SITE } from './data';
 import { ATTACK } from './lib/attacks';
@@ -44,7 +45,15 @@ export function currentUrlState(): UrlState {
 /** A full link to the current view. */
 export function shareUrl(): string {
   const { origin, pathname, search } = window.location;
-  return `${origin}${pathname}${search}#${encodeState(currentUrlState())}`;
+  const hash = encodeState(currentUrlState());
+  // A conflict with its own share page is shared through it, so the link
+  // previews with that conflict's title and picture; the page passes the hash
+  // on, so the view opened is still exactly the one shared.
+  const sel = useStore.getState().sel;
+  if (sel?.kind === 'conflict' && SHARE_CONFLICTS.includes(sel.id)) {
+    return `${origin}${pathname.replace(/[^/]*$/, '')}c/${sel.id}/${search}#${hash}`;
+  }
+  return `${origin}${pathname}${search}#${hash}`;
 }
 
 /**
